@@ -26,7 +26,7 @@ use super::common::{
 };
 use crate::{
     averaging::{parse_time_average_factor, timesteps_to_timeblocks, AverageFactorError},
-    beam::SkaBeamParams,
+    beam::{self, BeamType, SkaBeamParams},
     io::write::{can_write_to_file, VIS_OUTPUT_EXTENSIONS},
     params::{DiCalParams, ModellingParams},
     solutions::{self, CalSolutionType, CalibrationSolutions, CAL_SOLUTION_EXTENSIONS},
@@ -260,11 +260,20 @@ impl DiCalArgs {
             .sum::<f64>()
             / obs_context.fine_chan_freqs.len() as f64;
 
-        let ska_beam_params = SkaBeamParams {
-            phase_centre: obs_context.phase_centre,
-            ska_latitude_rad: latitude_rad,
-            ref_freq_hz: freq_centroid,
-            num_stations: total_num_tiles,
+        let beam_type = beam_args
+            .determine_beam_type()
+            .map_err(HyperdriveError::Beam(
+                "Can't determine beam type".to_owned(),
+            ));
+
+        let ska_beam_params: Option<SkaBeamParams> = match beam_type {
+            BeamType::SkaGaussian | BeamType::SkaAiry => Some(SkaBeamParams {
+                phase_centre: obs_context.phase_centre,
+                ska_latitude_rad: latitude_rad,
+                ref_freq_hz: freq_centroid,
+                num_stations: total_num_tiles,
+            }),
+            _ => None,
         };
 
         let beam = beam_args.parse(
@@ -636,7 +645,7 @@ impl DiCalArgs {
             output_solution_files,
             output_model_vis_params,
             modelling_params,
-            ska_beam_params,
+            ska_beam_params: Some(ska_beam_params),
         })
     }
 

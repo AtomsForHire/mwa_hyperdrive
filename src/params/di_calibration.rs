@@ -109,7 +109,7 @@ pub(crate) struct DiCalParams {
     /// Parameters for modelling.
     pub(crate) modelling_params: ModellingParams,
 
-    pub(crate) ska_beam_params: SkaBeamParams,
+    pub(crate) ska_beam_params: Option<SkaBeamParams>,
 }
 
 impl DiCalParams {
