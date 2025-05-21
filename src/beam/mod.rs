@@ -22,7 +22,6 @@ pub(crate) use error::BeamError;
 pub(crate) use fee::FEEBeam;
 pub(crate) use ska::{SkaAiryBeam, SkaBeamParams, SkaGaussianBeam};
 
-use crate::beam::SkaBeamParams;
 use std::{path::Path, str::FromStr};
 
 use itertools::Itertools;
@@ -32,7 +31,7 @@ use ndarray::prelude::*;
 use strum::IntoEnumIterator;
 
 // Default variables for create_beam_object ska beams
-const DEFAULT_SKA_PHASE_CENTRE: RADec = RAdec { ra: 0.0, dec: 0.0 };
+const DEFAULT_SKA_PHASE_CENTRE: RADec = RADec { ra: 0.0, dec: 0.0 };
 const DEFAULT_SKA_REF_FREQ_HZ: f64 = 100e6;
 const DEFAULT_SKA_SITE_LATITUDE_RAD: f64 = 0.0;
 
