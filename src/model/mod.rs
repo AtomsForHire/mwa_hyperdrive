@@ -23,7 +23,12 @@ use hifitime::{Duration, Epoch};
 use marlu::{c32, Jones, RADec, XyzGeodetic, UVW};
 use ndarray::{Array2, ArrayViewMut2};
 
-use crate::{beam::Beam, context::Polarisations, srclist::SourceList, MODEL_DEVICE};
+use crate::{
+    beam::{Beam, SkaBeamParams},
+    context::Polarisations,
+    srclist::SourceList,
+    MODEL_DEVICE,
+};
 
 #[derive(Debug, Clone, Copy)]
 pub enum ModelDevice {
@@ -186,6 +191,7 @@ pub fn new_sky_modeller<'a>(
     array_latitude_rad: f64,
     dut1: Duration,
     apply_precession: bool,
+    ska_beam_params: Option<&'a SkaBeamParams>,
 ) -> Result<Box<dyn SkyModeller<'a> + 'a>, ModelError> {
     match MODEL_DEVICE.load() {
         ModelDevice::Cpu => Ok(Box::new(SkyModellerCpu::new(
