@@ -41,9 +41,6 @@ pub enum BeamError {
     #[error("hyperbeam init error: {0}")]
     HyperbeamInit(#[from] mwa_hyperbeam::fee::InitFEEBeamError),
 
-    #[error("Missing obs context when trying to create SKA beam, could be issue with order of operations.")]
-    MissingObsContext,
-
     #[cfg(any(feature = "cuda", feature = "hip"))]
     #[error(transparent)]
     Gpu(#[from] crate::gpu::GpuError),

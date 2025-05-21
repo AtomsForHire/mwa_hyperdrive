@@ -403,7 +403,6 @@ pub fn create_beam_object(
     beam_type: Option<&str>,
     num_tiles: usize,
     dipole_delays: Delays,
-    obs_context: Option<&crate::context::ObsContext>,
 ) -> Result<Box<dyn Beam>, BeamError> {
     let beam_type = match (
         beam_type,
@@ -453,34 +452,7 @@ pub fn create_beam_object(
             )?))
         }
 
-        BeamType::SkaGaussian => {
-            debug!("Setting up a SKA Gaussian beam object");
-            let config = if let Some(obs_context) = obs_context {
-                SkaBeamConfig::new(
-                    obs_context.get_total_num_tiles(),
-                    obs_context.phase_centre,
-                    obs_context.fine_chan_freqs[0] as f64,
-                    obs_context.array_position.latitude_rad,
-                )
-            } else {
-                return Err(BeamError::MissingObsContext);
-            };
-            Ok(Box::new(SkaGaussianBeam::new(config)))
-        }
-
-        BeamType::SkaAiry => {
-            debug!("Setting up a SKA Airy beam object");
-            let config = if let Some(obs_context) = obs_context {
-                SkaBeamConfig::new(
-                    obs_context.get_total_num_tiles(),
-                    obs_context.phase_centre,
-                    obs_context.fine_chan_freqs[0] as f64,
-                    obs_context.array_position.latitude_rad,
-                )
-            } else {
-                return Err(BeamError::MissingObsContext);
-            };
-            Ok(Box::new(SkaAiryBeam::new(config)))
-        }
+        BeamType::SkaGaussian => Ok(Box::new(SkaGaussianBeam)),
+        BeamType::SkaAiry => Ok(Box::new(SkaAiryBeam)),
     }
 }

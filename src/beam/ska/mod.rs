@@ -13,38 +13,14 @@ mod gaussian;
 pub(crate) use airy::SkaAiryBeam;
 pub(crate) use gaussian::SkaGaussianBeam;
 
-use std::f64::consts::FRAC_PI_2;
+use std::f64::consts::FRAC_PI_6;
 
-use marlu::{AzEl, Jones, RADec};
-use ndarray::prelude::*;
-use num_complex::Complex;
-use rayon::prelude::*;
+use marlu::RADec;
 
-use crate::beam::{Beam, BeamError, BeamType};
-#[cfg(any(feature = "cuda", feature = "hip"))]
-use crate::beam::{BeamGpu, DevicePointer, GpuFloat};
-
-/// Configuration for SKA beams
-#[derive(Debug, Clone)]
-pub struct SkaBeamConfig {
-    /// Number of stations in the array
-    pub num_stations: usize,
-    /// Phase centre of the observation
-    pub phase_centre: RADec,
-    /// Reference frequency in Hz
-    pub ref_freq_hz: f64,
-    /// Array latitude in radians
-    pub latitude_rad: f64,
-}
-
-impl SkaBeamConfig {
-    /// Create a new SKA beam configuration
-    pub fn new(num_stations: usize, phase_centre: RADec, ref_freq_hz: f64, latitude_rad: f64) -> Self {
-        Self {
-            num_stations,
-            phase_centre,
-            ref_freq_hz,
-            latitude_rad,
-        }
-    }
-}
+const NUM_STATIONS: usize = 512;
+const PHASE_CENTRE: RADec = RADec {
+    ra: 0.0,
+    dec: -FRAC_PI_6,
+};
+const REF_FREQ_HZ: f64 = 106e6;
+const SKA_LATITUDE_RAD: f64 = -0.4681797212;
