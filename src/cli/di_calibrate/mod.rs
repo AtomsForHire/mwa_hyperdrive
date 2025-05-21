@@ -288,7 +288,7 @@ impl DiCalArgs {
             obs_context.dipole_delays.clone(),
             obs_context.dipole_gains.clone(),
             Some(obs_context.input_data_type),
-            ska_beam_params.clone(),
+            Some(ska_beam_params.clone()),
         )?;
 
         let source_list = srclist_args.parse(
