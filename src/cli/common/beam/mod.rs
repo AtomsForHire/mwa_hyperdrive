@@ -242,6 +242,14 @@ impl BeamArgs {
                 printer.push_line(
                     format!("Reference frequency: {}", params.reference_frequency_hz).into(),
                 );
+                printer.push_line(
+                    format!(
+                        "Phase centre:      {:>8.4}° {:>8.4}° (J2000)",
+                        params.phase_centre.ra.to_degrees(),
+                        params.phase_centre.dec.to_degrees()
+                    )
+                    .into(),
+                );
                 Box::new(crate::beam::SkaGaussianBeam::new(params))
             }
 
@@ -254,6 +262,15 @@ impl BeamArgs {
                 printer.push_line(
                     format!("Reference frequency: {}", params.reference_frequency_hz).into(),
                 );
+                printer.push_line(
+                    format!(
+                        "Phase centre:      {:>8.4}° {:>8.4}° (J2000)",
+                        params.phase_centre.ra.to_degrees(),
+                        params.phase_centre.dec.to_degrees()
+                    )
+                    .into(),
+                );
+
                 Box::new(crate::beam::SkaAiryBeam::new(params))
             }
         };
