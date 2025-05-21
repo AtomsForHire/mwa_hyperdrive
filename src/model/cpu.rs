@@ -4,6 +4,7 @@
 
 //! Code to generate sky-model visibilities.
 
+use crate::beam::SkaBeam;
 use std::{
     borrow::Cow,
     collections::{hash_map::DefaultHasher, HashMap, HashSet},

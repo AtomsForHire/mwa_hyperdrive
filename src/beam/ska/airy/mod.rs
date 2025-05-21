@@ -24,7 +24,7 @@ const J_ZERO_THINGY: f64 = 1.2196698912665045;
 // }
 
 #[derive(Clone, Copy)]
-pub(crate) struct SkaAiryBeam {}
+pub(crate) struct SkaAiryBeam;
 
 impl SkaAiryBeam {
     fn calc_jones_inner(

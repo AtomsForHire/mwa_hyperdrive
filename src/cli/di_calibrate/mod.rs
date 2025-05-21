@@ -231,6 +231,7 @@ impl DiCalArgs {
         let obs_context = input_vis_params.get_obs_context();
         let total_num_tiles = input_vis_params.get_total_num_tiles();
 
+        let modelling_params @ ModellingParams { apply_precession } = model_args.parse();
         let LatLngHeight {
             longitude_rad,
             latitude_rad,
@@ -282,7 +283,6 @@ impl DiCalArgs {
             obs_context.dipole_gains.clone(),
             Some(obs_context.input_data_type),
         )?;
-        let modelling_params @ ModellingParams { apply_precession } = model_args.parse();
 
         let DiCalCliArgs {
             timesteps_per_timeblock,
@@ -298,27 +298,27 @@ impl DiCalArgs {
             output_smallest_contiguous_band,
         } = calibration_args;
 
-        let LatLngHeight {
-            longitude_rad,
-            latitude_rad,
-            height_metres: _,
-        } = obs_context.array_position;
-        let precession_info = precess_time(
-            longitude_rad,
-            latitude_rad,
-            obs_context.phase_centre,
-            // obs_context.timestamps[*timesteps_to_use.first()],
-            input_vis_params.timeblocks.first().median,
-            input_vis_params.dut1,
-        );
-        let (lst_rad, latitude_rad) = if apply_precession {
-            (
-                precession_info.lmst_j2000,
-                precession_info.array_latitude_j2000,
-            )
-        } else {
-            (precession_info.lmst, latitude_rad)
-        };
+        // let LatLngHeight {
+        //     longitude_rad,
+        //     latitude_rad,
+        //     height_metres: _,
+        // } = obs_context.array_position;
+        // let precession_info = precess_time(
+        //     longitude_rad,
+        //     latitude_rad,
+        //     obs_context.phase_centre,
+        //     // obs_context.timestamps[*timesteps_to_use.first()],
+        //     input_vis_params.timeblocks.first().median,
+        //     input_vis_params.dut1,
+        // );
+        // let (lst_rad, latitude_rad) = if apply_precession {
+        //     (
+        //         precession_info.lmst_j2000,
+        //         precession_info.array_latitude_j2000,
+        //     )
+        // } else {
+        //     (precession_info.lmst, latitude_rad)
+        // };
 
         let source_list = srclist_args.parse(
             obs_context.phase_centre,
