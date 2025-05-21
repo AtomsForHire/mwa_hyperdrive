@@ -31,9 +31,9 @@ impl SkaGaussianBeam {
     pub fn new(params: SkaBeamParams) -> Self {
         Self {
             phase_centre: params.phase_centre,
-            ska_site_latitude_rad: params.ska_latitude_rad,
-            reference_frequency_hz: params.ref_freq_hz,
-            number_of_stations: params.num_stations,
+            ska_site_latitude_rad: params.ska_site_latitude_rad,
+            reference_frequency_hz: params.reference_frequency_hz,
+            number_of_stations: params.number_of_stations,
         }
     }
 

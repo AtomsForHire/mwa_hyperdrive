@@ -269,6 +269,13 @@ impl DiCalArgs {
             (precession_info.lmst, latitude_rad)
         };
 
+        let freq_centroid = obs_context
+            .fine_chan_freqs
+            .iter()
+            .map(|&u| u as f64)
+            .sum::<f64>()
+            / obs_context.fine_chan_freqs.len() as f64;
+
         let ska_beam_params = SkaBeamParams {
             phase_centre: obs_context.phase_centre,
             ska_site_latitude_rad: latitude_rad,
@@ -352,12 +359,6 @@ impl DiCalArgs {
 
         // Set baseline weights from UVW cuts. Use a lambda from the centroid
         // frequency if UVW cutoffs are specified as wavelengths.
-        let freq_centroid = obs_context
-            .fine_chan_freqs
-            .iter()
-            .map(|&u| u as f64)
-            .sum::<f64>()
-            / obs_context.fine_chan_freqs.len() as f64;
         let lambda = marlu::constants::VEL_C / freq_centroid;
         let (uvw_min, uvw_min_metres) = {
             let (quantity, unit) = parse_wavelength(uvw_min.as_deref().unwrap_or(DEFAULT_UVW_MIN))

@@ -237,12 +237,11 @@ impl BeamArgs {
                 printer.push_line("Type: SKA Gaussian".into());
                 let params = array_params.ok_or_else(|| {
                     BeamError::Unrecognised("No ska params created need by SkaGaussian".to_owned())
-                });
-                printer.push_line(format!("Number of tiles: {}", params.number_of_stations));
-                printer.push_line(format!(
-                    "Reference frequency: {}",
-                    params.reference_frequency_hz
-                ));
+                })?;
+                printer.push_line(format!("Number of tiles: {}", params.number_of_stations).into());
+                printer.push_line(
+                    format!("Reference frequency: {}", params.reference_frequency_hz).into(),
+                );
                 Box::new(crate::beam::SkaGaussianBeam::new(params))
             }
 
@@ -250,12 +249,11 @@ impl BeamArgs {
                 printer.push_line("Type: SKA Airy".into());
                 let params = array_params.ok_or_else(|| {
                     BeamError::Unrecognised("No ska params created need by SkaGaussian".to_owned())
-                });
-                printer.push_line(format!("Number of tiles: {}", params.number_of_stations));
-                printer.push_line(format!(
-                    "Reference frequency: {}",
-                    params.reference_frequency_hz
-                ));
+                })?;
+                printer.push_line(format!("Number of tiles: {}", params.number_of_stations).into());
+                printer.push_line(
+                    format!("Reference frequency: {}", params.reference_frequency_hz).into(),
+                );
                 Box::new(crate::beam::SkaAiryBeam::new(params))
             }
         };

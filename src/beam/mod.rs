@@ -22,13 +22,19 @@ pub(crate) use error::BeamError;
 pub(crate) use fee::FEEBeam;
 pub(crate) use ska::{SkaAiryBeam, SkaBeamParams, SkaGaussianBeam};
 
+use crate::beam::SkaBeamParams;
 use std::{path::Path, str::FromStr};
 
 use itertools::Itertools;
 use log::debug;
-use marlu::{AzEl, Jones};
+use marlu::{AzEl, Jones, RADec};
 use ndarray::prelude::*;
 use strum::IntoEnumIterator;
+
+// Default variables for create_beam_object ska beams
+const DEFAULT_SKA_PHASE_CENTRE: RADec = RAdec { ra: 0.0, dec: 0.0 };
+const DEFAULT_SKA_REF_FREQ_HZ: f64 = 100e6;
+const DEFAULT_SKA_SITE_LATITUDE_RAD: f64 = 0.0;
 
 #[cfg(any(feature = "cuda", feature = "hip"))]
 use crate::gpu::{DevicePointer, GpuFloat};
@@ -452,7 +458,27 @@ pub fn create_beam_object(
             )?))
         }
 
-        BeamType::SkaGaussian => Ok(Box::new(SkaGaussianBeam)),
-        BeamType::SkaAiry => Ok(Box::new(SkaAiryBeam)),
+        BeamType::SkaGaussian => {
+            debug!("Setting up a SkaGaussianBeam object via create_beam_object using default SKA params");
+            let default_ska_params = SkaBeamParams {
+                phase_centre: DEFAULT_SKA_PHASE_CENTRE,
+                ska_site_latitude_rad: DEFAULT_SKA_SITE_LATITUDE_RAD,
+                reference_frequency_hz: DEFAULT_SKA_REF_FREQ_HZ,
+                number_of_stations: num_tiles, // Use num_tiles argument for number_of_stations
+            };
+            Ok(Box::new(SkaGaussianBeam::new(default_ska_params)))
+        }
+        BeamType::SkaAiry => {
+            debug!(
+                "Setting up a SkaAiryBeam object via create_beam_object using default SKA params"
+            );
+            let default_ska_params = SkaBeamParams {
+                phase_centre: DEFAULT_SKA_PHASE_CENTRE,
+                ska_site_latitude_rad: DEFAULT_SKA_SITE_LATITUDE_RAD,
+                reference_frequency_hz: DEFAULT_SKA_REF_FREQ_HZ,
+                number_of_stations: num_tiles, // Use num_tiles argument for number_of_stations
+            };
+            Ok(Box::new(SkaAiryBeam::new(default_ska_params)))
+        }
     }
 }
