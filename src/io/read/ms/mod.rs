@@ -1020,7 +1020,12 @@ impl MsReader {
                                     .collect()
                             } else {
                                 // One weight per frequency.
-                                row.get_cell(self.weight_col_name)?
+                                let weights = row.get_cell(self.weight_col_name)?;
+                                let mut expanded_weights = Vec::with_capacity(ms_data.len_of(Axis(0)));
+                                for _ in 0..ms_data.len_of(Axis(0)){
+                                    expanded_weights.extend_from_slice(&weights);
+                                }
+                                //row.get_cell(self.weight_col_name)?
                             }
                         };
                         // The flag array is arranged
