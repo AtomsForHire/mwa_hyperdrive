@@ -991,10 +991,14 @@ impl MsReader {
 
                 // Read this row if the baseline is unflagged.
                 if let Some(crosses) = crosses.as_mut() {
+                    let baseline_key = (ant1, ant2);
+                    let baseline_key_reverse = (ant2, ant1);
                     if let Some(bl) = crosses
                         .tile_baseline_flags
                         .tile_to_unflagged_cross_baseline_map
-                        .get(&(ant1, ant2))
+                        //.get(&(ant1, ant2))
+                        .get(&baseline_key)
+                        .or_else(|| crosses.tile_baseline_flags.tile_to_unflagged_cross_baseline_map.get(&&baseline_key_reverse))
                         .copied()
                     {
                         // The data array is arranged [frequency][instrumental_pol].
