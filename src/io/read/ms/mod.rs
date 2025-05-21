@@ -1021,7 +1021,7 @@ impl MsReader {
                             } else {
                                 // One weight per frequency.
                                 let weights = row.get_cell(self.weight_col_name)?;
-                                let mut expanded_weights = Vec::with_capacity(ms_data.len_of(Axis(0)));
+                                let mut expanded_weights: Vec<f32> = Vec::with_capacity(ms_data.len_of(Axis(0)));
                                 for _ in 0..ms_data.len_of(Axis(0)){
                                     expanded_weights.extend_from_slice(&weights);
                                 }
