@@ -26,6 +26,7 @@ use super::common::{
 };
 use crate::{
     averaging::{parse_time_average_factor, timesteps_to_timeblocks, AverageFactorError},
+    beam::SkaBeamParams,
     io::write::{can_write_to_file, VIS_OUTPUT_EXTENSIONS},
     params::{DiCalParams, ModellingParams},
     solutions::{self, CalSolutionType, CalibrationSolutions, CAL_SOLUTION_EXTENSIONS},
@@ -230,6 +231,42 @@ impl DiCalArgs {
         let obs_context = input_vis_params.get_obs_context();
         let total_num_tiles = input_vis_params.get_total_num_tiles();
 
+        let LatLngHeight {
+            longitude_rad,
+            latitude_rad,
+            height_metres: _,
+        } = obs_context.array_position;
+        let precession_info = precess_time(
+            longitude_rad,
+            latitude_rad,
+            obs_context.phase_centre,
+            // obs_context.timestamps[*timesteps_to_use.first()],
+            input_vis_params.timeblocks.first().median,
+            input_vis_params.dut1,
+        );
+        let (lst_rad, latitude_rad) = if apply_precession {
+            (
+                precession_info.lmst_j2000,
+                precession_info.array_latitude_j2000,
+            )
+        } else {
+            (precession_info.lmst, latitude_rad)
+        };
+
+        let freq_centroid = obs_context
+            .fine_chan_freqs
+            .iter()
+            .map(|&u| u as f64)
+            .sum::<f64>()
+            / obs_context.fine_chan_freqs.len() as f64;
+
+        let ska_beam_params = SkaBeamParams {
+            phase_centre: obs_context.phase_centre,
+            ska_latitude_rad: latitude_rad,
+            ref_freq_hz: freq_centroid,
+            num_stations: total_num_tiles,
+        };
+
         let beam = beam_args.parse(
             total_num_tiles,
             obs_context.dipole_delays.clone(),
@@ -342,12 +379,6 @@ impl DiCalArgs {
 
         // Set baseline weights from UVW cuts. Use a lambda from the centroid
         // frequency if UVW cutoffs are specified as wavelengths.
-        let freq_centroid = obs_context
-            .fine_chan_freqs
-            .iter()
-            .map(|&u| u as f64)
-            .sum::<f64>()
-            / obs_context.fine_chan_freqs.len() as f64;
         let lambda = marlu::constants::VEL_C / freq_centroid;
         let (uvw_min, uvw_min_metres) = {
             let (quantity, unit) = parse_wavelength(uvw_min.as_deref().unwrap_or(DEFAULT_UVW_MIN))
@@ -605,6 +636,7 @@ impl DiCalArgs {
             output_solution_files,
             output_model_vis_params,
             modelling_params,
+            ska_beam_params,
         })
     }
 

@@ -24,7 +24,7 @@ use vec1::Vec1;
 use super::{InputVisParams, ModellingParams, OutputVisParams};
 use crate::{
     averaging::Timeblock,
-    beam::Beam,
+    beam::{Beam, SkaBeamParams},
     context::Polarisations,
     di_calibrate::calibrate_timeblocks,
     io::{
@@ -108,6 +108,8 @@ pub(crate) struct DiCalParams {
 
     /// Parameters for modelling.
     pub(crate) modelling_params: ModellingParams,
+
+    pub(crate) ska_beam_params: SkaBeamParams,
 }
 
 impl DiCalParams {
