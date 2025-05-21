@@ -10,6 +10,7 @@
 mod airy;
 mod gaussian;
 
+use crate::beam::BeamError;
 pub(crate) use airy::SkaAiryBeam;
 pub(crate) use gaussian::SkaGaussianBeam;
 use marlu::RADec;

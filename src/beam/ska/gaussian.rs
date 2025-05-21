@@ -11,7 +11,7 @@ use rayon::prelude::*;
 
 //use super::{NUM_STATIONS, PHASE_CENTRE, REF_FREQ_HZ, SKA_LATITUDE_RAD};
 use super::SkaBeamParams;
-use crate::beam::{Beam, BeamError, BeamType};
+use crate::beam::{Beam, BeamError, BeamType, SkaBeam};
 #[cfg(any(feature = "cuda", feature = "hip"))]
 use crate::beam::{BeamGpu, DevicePointer, GpuFloat};
 

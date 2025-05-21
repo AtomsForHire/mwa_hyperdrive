@@ -10,7 +10,7 @@ use rayon::prelude::*;
 
 // use super::{NUM_STATIONS, PHASE_CENTRE, REF_FREQ_HZ, SKA_LATITUDE_RAD};
 use super::SkaBeamParams;
-use crate::beam::{self, Beam, BeamError, BeamType};
+use crate::beam::{self, Beam, BeamError, BeamType, SkaBeam};
 #[cfg(any(feature = "cuda", feature = "hip"))]
 use crate::beam::{BeamGpu, DevicePointer, GpuFloat};
 
@@ -24,9 +24,7 @@ const J_ZERO_THINGY: f64 = 1.2196698912665045;
 // }
 
 #[derive(Clone, Copy)]
-pub(crate) struct SkaAiryBeam {
-    pub num_stations: usize,
-}
+pub(crate) struct SkaAiryBeam {}
 
 impl SkaAiryBeam {
     fn calc_jones_inner(
