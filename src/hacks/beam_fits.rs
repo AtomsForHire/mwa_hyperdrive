@@ -2,8 +2,7 @@ use std::{path::PathBuf, sync::Arc};
 
 use crate::{
     beam::{create_beam_object, Delays},
-    context::ObsContext,
-    io::{read::fits::*, write::fits::*, read::ms::read_table},
+    io::{read::fits::*, write::fits::*},
     HyperdriveError,
 };
 use clap::Parser;
@@ -52,6 +51,9 @@ impl BeamFitsArgs {
         let latitude_rad = latitude_deg.to_radians();
         let longitude_rad = longitude_deg.to_radians();
 
+        let beam =
+            create_beam_object(Some(beam_type.as_str()), 1, Delays::Partial(vec![0; 16])).unwrap();
+
         std::fs::copy(fits_from, fits_to).unwrap();
 
         let mut fptr = fits_edit(fits_to)?;
@@ -68,55 +70,6 @@ impl BeamFitsArgs {
         let obsdec: f64 = fits_get_required_key(&mut fptr, &hdu, "OBSDEC")?;
         let phase_centre = RADec::from_degrees(obsra, obsdec);
         dbg!(&phase_centre);
-
-        // Get reference frequency from the FITS file or measurement set
-        let ref_freq_hz = if fits_from.extension().map_or(false, |ext| ext == "ms") {
-            // For measurement sets, read from SPECTRAL_WINDOW table
-            let mut spectral_window_table = read_table(fits_from, Some("SPECTRAL_WINDOW"))?;
-            let fine_chan_freqs: Vec<f64> = spectral_window_table.get_cell_as_vec("CHAN_FREQ", 0)?;
-            fine_chan_freqs[0] // Use the first frequency as reference
-        } else {
-            // For FITS files, read from CRVAL3
-            let crval3: f64 = fits_get_required_key(&mut fptr, &hdu, "CRVAL3")?;
-            crval3 * 1e6 // Convert MHz to Hz
-        };
-
-        // Create ObsContext for SKA beams
-        let obs_context = ObsContext {
-            input_data_type: VisInputType::Raw,
-            obsid: None,
-            timestamps: vec1![Epoch::from_gpst_seconds(1090008640.0)],
-            all_timesteps: vec1![0],
-            unflagged_timesteps: vec![0],
-            phase_centre,
-            pointing_centre: Some(phase_centre),
-            array_position: LatLngHeight::new(latitude_rad, longitude_rad, 0.0),
-            supplied_array_position: LatLngHeight::new(latitude_rad, longitude_rad, 0.0),
-            dut1: None,
-            tile_names: vec1!["Tile00".into()],
-            tile_xyzs: vec1![XyzGeodetic::default()],
-            flagged_tiles: vec![],
-            unavailable_tiles: vec![],
-            autocorrelations_present: false,
-            dipole_delays: Some(Delays::Partial(vec![0; 16])),
-            dipole_gains: None,
-            time_res: None,
-            mwa_coarse_chan_nums: None,
-            num_fine_chans_per_coarse_chan: None,
-            freq_res: None,
-            fine_chan_freqs: vec1![ref_freq_hz as u64],
-            flagged_fine_chans: vec![],
-            flagged_fine_chans_per_coarse_chan: None,
-            polarisations: Polarisations::default(),
-        };
-
-        let beam = create_beam_object(
-            Some(beam_type.as_str()),
-            1,
-            Delays::Partial(vec![0; 16]),
-            Some(&obs_context),
-        )
-        .unwrap();
 
         let naxis1: usize = fits_get_required_key(&mut fptr, &hdu, "NAXIS1")?;
         let crpix1: f64 = fits_get_required_key(&mut fptr, &hdu, "CRPIX1")?;
