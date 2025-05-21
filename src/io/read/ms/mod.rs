@@ -1025,6 +1025,7 @@ impl MsReader {
                                 for _ in 0..ms_data.len_of(Axis(0)){
                                     expanded_weights.extend_from_slice(&weights);
                                 }
+                                expanded_weights
                                 //row.get_cell(self.weight_col_name)?
                             }
                         };
