@@ -348,7 +348,7 @@ impl DiCalParams {
                         tx_model,
                         &error,
                         model_progress,
-                        self.ska_beam_params.as_ref(),
+                        self.ska_beam_params.clone(),
                     );
                     if result.is_err() {
                         error.store(true);
@@ -492,7 +492,7 @@ fn model_thread(
     tx: Sender<VisTimestep>,
     error: &AtomicCell<bool>,
     progress_bar: ProgressBar,
-    ska_beam_params: Option<&SkaBeamParams>,
+    ska_beam_params: Option<SkaBeamParams>,
 ) -> Result<(), ModelError> {
     let obs_context = input_vis_params.get_obs_context();
     let unflagged_tile_xyzs = obs_context

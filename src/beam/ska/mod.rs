@@ -33,6 +33,7 @@ use strum::IntoEnumIterator;
 // const REF_FREQ_HZ: f64 = 106e6;
 // const SKA_LATITUDE_RAD: f64 = -0.4681797212;
 
+#[derive(Clone, Debug)]
 pub struct SkaBeamParams {
     pub num_stations: usize,
     pub phase_centre: RADec,

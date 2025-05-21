@@ -82,7 +82,7 @@ impl<'a> SkyModellerCpu<'a> {
         array_latitude_rad: f64,
         dut1: Duration,
         apply_precession: bool,
-        ska_beam_params: Option<&'a SkaBeamParams>,
+        ska_beam_params: Option<SkaBeamParams>,
     ) -> SkyModellerCpu<'a> {
         let components = ComponentList::new(source_list, unflagged_fine_chan_freqs, phase_centre);
         let maps = crate::math::TileBaselineFlags::new(
@@ -212,14 +212,14 @@ impl<'a> SkyModellerCpu<'a> {
                         if let Some(ska_beam_object) =
                             self.beam.as_any().downcast_ref::<dyn SkaBeam>()
                         {
-                            ska_beam_object.calc_jones_array_ska(
+                            ska_beam_object.calc_jones_array_inner(
                                 // Call your new method
                                 azels,
-                                current_beam_eval_freq,
-                                Some(actual_tile_original_idx),
+                                *freq,
+                                Some(i_unique_tile),
                                 array_latitude_rad, // LST calculation latitude
-                                ska_p,              // The SkaBeamParams from self
-                                results_slice,
+                                slice,
+                                ska_p, // The SkaBeamParams from self
                             )?;
                         } else {
                             // Fallback or error if downcast fails for a reported SKA type

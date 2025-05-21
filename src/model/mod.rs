@@ -191,7 +191,7 @@ pub fn new_sky_modeller<'a>(
     array_latitude_rad: f64,
     dut1: Duration,
     apply_precession: bool,
-    ska_beam_params: Option<&'a SkaBeamParams>,
+    ska_beam_params: Option<SkaBeamParams>,
 ) -> Result<Box<dyn SkyModeller<'a> + 'a>, ModelError> {
     match MODEL_DEVICE.load() {
         ModelDevice::Cpu => Ok(Box::new(SkyModellerCpu::new(
