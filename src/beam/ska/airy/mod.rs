@@ -8,7 +8,7 @@ use marlu::{AzEl, Jones, RADec, LMN};
 use ndarray::prelude::*;
 use rayon::prelude::*;
 
-use super::{NUM_STATIONS, PHASE_CENTRE, REF_FREQ_HZ, SKA_LATITUDE_RAD};
+use super::SkaBeamConfig;
 use crate::beam::{Beam, BeamError, BeamType};
 #[cfg(any(feature = "cuda", feature = "hip"))]
 use crate::beam::{BeamGpu, DevicePointer, GpuFloat};
@@ -18,15 +18,18 @@ include!("bindings.rs");
 /// `scipy.special.jn_zeros(1, 1)[0] / np.pi`
 const J_ZERO_THINGY: f64 = 1.2196698912665045;
 
-lazy_static::lazy_static! {
-    static ref AIRY_CONST: f64 = PI * J_ZERO_THINGY / (5.15_f64.to_radians() * REF_FREQ_HZ);
+#[derive(Clone, Copy)]
+pub(crate) struct SkaAiryBeam {
+    config: SkaBeamConfig,
 }
 
-#[derive(Clone, Copy)]
-pub(crate) struct SkaAiryBeam;
-
 impl SkaAiryBeam {
+    pub(crate) fn new(config: SkaBeamConfig) -> Self {
+        Self { config }
+    }
+
     fn calc_jones_inner(
+        &self,
         azel: AzEl,
         freq_hz: f64,
         lst_rad: f64,
@@ -34,7 +37,7 @@ impl SkaAiryBeam {
         cent_l: f64,
         cent_m: f64,
     ) -> Jones<f64> {
-        let hadec = azel.to_hadec(SKA_LATITUDE_RAD);
+        let hadec = azel.to_hadec(self.config.latitude_rad);
         let beam_radec = hadec.to_radec(lst_rad);
         let LMN {
             l: beam_l,
@@ -45,9 +48,9 @@ impl SkaAiryBeam {
         let dist = ((beam_l - cent_l).powi(2) + (beam_m - cent_m).powi(2)).sqrt();
 
         // More explicit.
-        // let radius = 5.15_f64.to_radians() * REF_FREQ_HZ / freq_hz;
+        // let radius = 5.15_f64.to_radians() * self.config.ref_freq_hz / freq_hz;
         // let rt = dist / (radius / J_ZERO_THINGY) * PI;
-        let rt = dist * freq_hz * *AIRY_CONST;
+        let rt = dist * freq_hz * PI * J_ZERO_THINGY / (5.15_f64.to_radians() * self.config.ref_freq_hz);
 
         let z = (2.0 * unsafe { j1(rt) } / rt).abs();
 
@@ -61,7 +64,7 @@ impl Beam for SkaAiryBeam {
     }
 
     fn get_num_tiles(&self) -> usize {
-        NUM_STATIONS
+        self.config.num_stations
     }
 
     fn get_dipole_gains(&self) -> Option<ArcArray<f64, Dim<[usize; 2]>>> {
@@ -77,14 +80,14 @@ impl Beam for SkaAiryBeam {
         _tile_index: Option<usize>,
         lst_rad: f64,
     ) -> Result<Jones<f64>, BeamError> {
-        let zenith_radec = RADec::from_radians(lst_rad, SKA_LATITUDE_RAD);
+        let zenith_radec = RADec::from_radians(lst_rad, self.config.latitude_rad);
         let LMN {
             l: cent_l,
             m: cent_m,
             ..
-        } = PHASE_CENTRE.to_lmn(zenith_radec);
+        } = self.config.phase_centre.to_lmn(zenith_radec);
 
-        Ok(SkaAiryBeam::calc_jones_inner(
+        Ok(self.calc_jones_inner(
             azel,
             freq_hz,
             lst_rad,
@@ -114,18 +117,18 @@ impl Beam for SkaAiryBeam {
         lst_rad: f64,
         results: &mut [Jones<f64>],
     ) -> Result<(), BeamError> {
-        let zenith_radec = RADec::from_radians(lst_rad, SKA_LATITUDE_RAD);
+        let zenith_radec = RADec::from_radians(lst_rad, self.config.latitude_rad);
         let LMN {
             l: cent_l,
             m: cent_m,
             ..
-        } = PHASE_CENTRE.to_lmn(zenith_radec);
+        } = self.config.phase_centre.to_lmn(zenith_radec);
 
         azels
             .par_iter()
             .zip(results.par_iter_mut())
             .for_each(|(&azel, result)| {
-                *result = SkaAiryBeam::calc_jones_inner(
+                *result = self.calc_jones_inner(
                     azel,
                     freq_hz,
                     lst_rad,
@@ -140,7 +143,7 @@ impl Beam for SkaAiryBeam {
     #[cfg(any(feature = "cuda", feature = "hip"))]
     fn prepare_gpu_beam(&self, freqs_hz: &[u32]) -> Result<Box<dyn BeamGpu>, BeamError> {
         // All "tiles" have the same response.
-        let tile_map = DevicePointer::copy_to_device(&vec![0; NUM_STATIONS])?;
+        let tile_map = DevicePointer::copy_to_device(&vec![0; self.config.num_stations])?;
         // Each frequency is distinct.
         let freq_map = DevicePointer::copy_to_device(
             &(0..freqs_hz.len())
@@ -281,7 +284,14 @@ mod tests {
     fn test_airy_calc_jones_inner() {
         let freq_hz = 106000000.;
         let lst_rad = 5.769848203643869;
-        let beam = SkaAiryBeam;
+        let beam = SkaAiryBeam {
+            config: SkaBeamConfig {
+                num_stations: 1,
+                latitude_rad: 0.0,
+                phase_centre: LMN::default(),
+                ref_freq_hz: 106000000.0,
+            },
+        };
 
         let azel = AzEl::from_radians(2.00370398, 1.00922628);
         let jones = beam.calc_jones(azel, freq_hz, None, lst_rad).unwrap();

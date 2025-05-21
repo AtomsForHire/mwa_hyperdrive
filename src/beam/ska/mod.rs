@@ -17,10 +17,21 @@ use std::f64::consts::FRAC_PI_6;
 
 use marlu::RADec;
 
-const NUM_STATIONS: usize = 512;
-const PHASE_CENTRE: RADec = RADec {
-    ra: 0.0,
-    dec: -FRAC_PI_6,
-};
-const REF_FREQ_HZ: f64 = 106e6;
-const SKA_LATITUDE_RAD: f64 = -0.4681797212;
+// These values will be set from ObsContext when needed
+pub(crate) struct SkaBeamConfig {
+    pub(crate) num_stations: usize,
+    pub(crate) phase_centre: RADec,
+    pub(crate) ref_freq_hz: f64,
+    pub(crate) latitude_rad: f64,
+}
+
+impl SkaBeamConfig {
+    pub(crate) fn from_obs_context(obs_context: &crate::context::ObsContext) -> Self {
+        Self {
+            num_stations: obs_context.get_total_num_tiles(),
+            phase_centre: obs_context.phase_centre,
+            ref_freq_hz: obs_context.fine_chan_freqs[0] as f64,
+            latitude_rad: obs_context.array_position.latitude_rad,
+        }
+    }
+}
