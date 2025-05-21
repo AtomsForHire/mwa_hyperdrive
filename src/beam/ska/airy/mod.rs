@@ -109,7 +109,14 @@ impl SkaBeam for SkaAiryBeam {
         beam_params: SkaBeamParams,
     ) -> Result<Vec<Jones<f64>>, BeamError> {
         let mut results = vec![Jones::default(); azels.len()];
-        self.calc_jones_array_inner(azels, freq_hz, tile_index, latitude_rad, &mut results)?;
+        self.calc_jones_array_inner(
+            azels,
+            freq_hz,
+            tile_index,
+            latitude_rad,
+            &mut results,
+            beam_params,
+        )?;
         Ok(results)
     }
 
@@ -293,7 +300,9 @@ mod tests {
         let beam = SkaAiryBeam;
 
         let azel = AzEl::from_radians(2.00370398, 1.00922628);
-        let jones = beam.calc_jones(azel, freq_hz, None, lst_rad).unwrap();
+        let jones = beam
+            .calc_jones(azel, freq_hz, None, lst_rad, SkaBeamParams)
+            .unwrap();
         let expected = 0.0143450805168023_f64.sqrt();
         assert_abs_diff_eq!(jones[0].re, expected, epsilon = 1e-6);
         assert_abs_diff_eq!(jones[0].im, 0.0);
@@ -305,7 +314,9 @@ mod tests {
         assert_abs_diff_eq!(jones[3].im, 0.0);
 
         let azel = AzEl::from_radians(0.1, 0.1);
-        let jones = beam.calc_jones(azel, freq_hz, None, lst_rad).unwrap();
+        let jones = beam
+            .calc_jones(azel, freq_hz, None, lst_rad, SkaBeamParams)
+            .unwrap();
         let expected = 1.20727184e-5_f64.sqrt();
         assert_abs_diff_eq!(jones[0].re, expected, epsilon = 1e-6);
         assert_abs_diff_eq!(jones[0].im, 0.0);

@@ -219,7 +219,7 @@ impl<'a> SkyModellerCpu<'a> {
                                 Some(i_unique_tile),
                                 array_latitude_rad, // LST calculation latitude
                                 slice,
-                                ska_p, // The SkaBeamParams from self
+                                self.ska_beam_params.as_ref(), // The SkaBeamParams from self
                             )?;
                         } else {
                             // Fallback or error if downcast fails for a reported SKA type

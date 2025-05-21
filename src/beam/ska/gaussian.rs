@@ -135,6 +135,7 @@ impl SkaBeam for SkaGaussianBeam {
             cent_l,
             cent_m,
             std,
+            beam_params,
         ))
     }
 
@@ -144,9 +145,17 @@ impl SkaBeam for SkaGaussianBeam {
         freq_hz: f64,
         tile_index: Option<usize>,
         latitude_rad: f64,
+        beam_params: SkaBeamParams,
     ) -> Result<Vec<Jones<f64>>, BeamError> {
         let mut results = vec![Jones::default(); azels.len()];
-        self.calc_jones_array_inner(azels, freq_hz, tile_index, latitude_rad, &mut results)?;
+        self.calc_jones_array_inner(
+            azels,
+            freq_hz,
+            tile_index,
+            latitude_rad,
+            &mut results,
+            beam_params,
+        )?;
         Ok(results)
     }
 
@@ -182,6 +191,7 @@ impl SkaBeam for SkaGaussianBeam {
                     cent_l,
                     cent_m,
                     std,
+                    beam_params,
                 );
             });
         Ok(())
@@ -343,7 +353,9 @@ mod tests {
         let beam = SkaGaussianBeam;
 
         let azel = AzEl::from_radians(2.00370398, 1.00922628);
-        let jones = beam.calc_jones(azel, freq_hz, None, lst_rad).unwrap();
+        let jones = beam
+            .calc_jones(azel, freq_hz, None, lst_rad, SkaBeamParams)
+            .unwrap();
         let expected = 0.00018248210368566883;
         assert_abs_diff_eq!(jones[0], Complex::new(expected, 0.0), epsilon = 1e-6);
         assert_abs_diff_eq!(jones[1], Complex::new(0.0, 0.0), epsilon = 1e-6);
