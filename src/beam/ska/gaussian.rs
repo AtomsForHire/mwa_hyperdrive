@@ -9,7 +9,8 @@ use ndarray::prelude::*;
 use num_complex::Complex;
 use rayon::prelude::*;
 
-use super::{NUM_STATIONS, PHASE_CENTRE, REF_FREQ_HZ, SKA_LATITUDE_RAD};
+//use super::{NUM_STATIONS, PHASE_CENTRE, REF_FREQ_HZ, SKA_LATITUDE_RAD};
+use super::SkaBeamParams;
 use crate::beam::{Beam, BeamError, BeamType};
 #[cfg(any(feature = "cuda", feature = "hip"))]
 use crate::beam::{BeamGpu, DevicePointer, GpuFloat};
@@ -70,8 +71,11 @@ impl SkaGaussianBeam {
         cent_l: f64,
         cent_m: f64,
         sigma: f64,
+        beam_params: SkaBeamParams,
     ) -> Jones<f64> {
-        let beam_radec = azel.to_hadec(SKA_LATITUDE_RAD).to_radec(lst_rad);
+        let beam_radec = azel
+            .to_hadec(beam_params.ska_latitude_rad)
+            .to_radec(lst_rad);
         let LMN {
             l: beam_l,
             m: beam_m,
@@ -89,7 +93,7 @@ impl SkaGaussianBeam {
     }
 }
 
-impl Beam for SkaGaussianBeam {
+impl SkaBeam for SkaGaussianBeam {
     fn get_beam_type(&self) -> BeamType {
         BeamType::SkaGaussian
     }
@@ -109,18 +113,19 @@ impl Beam for SkaGaussianBeam {
         freq_hz: f64,
         _tile_index: Option<usize>,
         latitude_rad: f64,
+        beam_params: SkaBeamParams,
     ) -> Result<Jones<f64>, BeamError> {
         let lst_rad = latitude_rad;
-        let zenith_radec = RADec::from_radians(lst_rad, SKA_LATITUDE_RAD);
+        let zenith_radec = RADec::from_radians(lst_rad, beam_params.ska_latitude_rad);
         let LMN {
             l: cent_l,
             m: cent_m,
             ..
-        } = PHASE_CENTRE.to_lmn(zenith_radec);
+        } = beam_params.phase_centre.to_lmn(zenith_radec);
 
         // scale fwhm to be in l,m coords
         let fwhm_lm = FWHM_RAD.sin();
-        let std = (fwhm_lm / FWHM_FACTOR) * (REF_FREQ_HZ / freq_hz);
+        let std = (fwhm_lm / FWHM_FACTOR) * (beam_params.ref_freq_hz / freq_hz);
 
         Ok(SkaGaussianBeam::calc_jones_inner(
             azel,
@@ -151,18 +156,19 @@ impl Beam for SkaGaussianBeam {
         _tile_index: Option<usize>,
         latitude_rad: f64,
         results: &mut [Jones<f64>],
+        beam_params: SkaBeamParams,
     ) -> Result<(), BeamError> {
         let lst_rad = latitude_rad;
-        let zenith_radec = RADec::from_radians(lst_rad, SKA_LATITUDE_RAD);
+        let zenith_radec = RADec::from_radians(lst_rad, beam_params.ska_latitude_rad);
         let LMN {
             l: cent_l,
             m: cent_m,
             ..
-        } = PHASE_CENTRE.to_lmn(zenith_radec);
+        } = beam_params.phase_centre.to_lmn(zenith_radec);
 
         // scale fwhm to be in l,m coords
         let fwhm_lm = FWHM_RAD.sin();
-        let std = (fwhm_lm / FWHM_FACTOR) * (REF_FREQ_HZ / freq_hz);
+        let std = (fwhm_lm / FWHM_FACTOR) * (beam_params.ref_freq_hz / freq_hz);
 
         azels
             .par_iter()

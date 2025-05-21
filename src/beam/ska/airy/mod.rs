@@ -8,8 +8,9 @@ use marlu::{AzEl, Jones, RADec, LMN};
 use ndarray::prelude::*;
 use rayon::prelude::*;
 
-use super::{NUM_STATIONS, PHASE_CENTRE, REF_FREQ_HZ, SKA_LATITUDE_RAD};
-use crate::beam::{Beam, BeamError, BeamType};
+// use super::{NUM_STATIONS, PHASE_CENTRE, REF_FREQ_HZ, SKA_LATITUDE_RAD};
+use super::SkaBeamParams;
+use crate::beam::{self, Beam, BeamError, BeamType};
 #[cfg(any(feature = "cuda", feature = "hip"))]
 use crate::beam::{BeamGpu, DevicePointer, GpuFloat};
 
@@ -23,7 +24,9 @@ lazy_static::lazy_static! {
 }
 
 #[derive(Clone, Copy)]
-pub(crate) struct SkaAiryBeam;
+pub(crate) struct SkaAiryBeam {
+    pub num_stations: usize,
+}
 
 impl SkaAiryBeam {
     fn calc_jones_inner(
@@ -33,8 +36,9 @@ impl SkaAiryBeam {
         zenith_radec: RADec,
         cent_l: f64,
         cent_m: f64,
+        beam_params: SkaBeamParams,
     ) -> Jones<f64> {
-        let hadec = azel.to_hadec(SKA_LATITUDE_RAD);
+        let hadec = azel.to_hadec(beam_params.ska_latitude_rad);
         let beam_radec = hadec.to_radec(lst_rad);
         let LMN {
             l: beam_l,
@@ -55,13 +59,14 @@ impl SkaAiryBeam {
     }
 }
 
-impl Beam for SkaAiryBeam {
+impl SkaBeam for SkaAiryBeam {
     fn get_beam_type(&self) -> BeamType {
         BeamType::SkaAiry
     }
 
     fn get_num_tiles(&self) -> usize {
-        NUM_STATIONS
+        // NUM_STATIONS
+        self.num_stations
     }
 
     fn get_dipole_gains(&self) -> Option<ArcArray<f64, Dim<[usize; 2]>>> {
@@ -76,13 +81,14 @@ impl Beam for SkaAiryBeam {
         freq_hz: f64,
         _tile_index: Option<usize>,
         lst_rad: f64,
+        beam_params: SkaBeamParams,
     ) -> Result<Jones<f64>, BeamError> {
-        let zenith_radec = RADec::from_radians(lst_rad, SKA_LATITUDE_RAD);
+        let zenith_radec = RADec::from_radians(lst_rad, beam_params.ska_latitude_rad);
         let LMN {
             l: cent_l,
             m: cent_m,
             ..
-        } = PHASE_CENTRE.to_lmn(zenith_radec);
+        } = beam_params.phase_centre.to_lmn(zenith_radec);
 
         Ok(SkaAiryBeam::calc_jones_inner(
             azel,
@@ -91,6 +97,7 @@ impl Beam for SkaAiryBeam {
             zenith_radec,
             cent_l,
             cent_m,
+            beam_params,
         ))
     }
 
@@ -100,6 +107,7 @@ impl Beam for SkaAiryBeam {
         freq_hz: f64,
         tile_index: Option<usize>,
         latitude_rad: f64,
+        beam_params: SkaBeamParams,
     ) -> Result<Vec<Jones<f64>>, BeamError> {
         let mut results = vec![Jones::default(); azels.len()];
         self.calc_jones_array_inner(azels, freq_hz, tile_index, latitude_rad, &mut results)?;
@@ -113,13 +121,14 @@ impl Beam for SkaAiryBeam {
         _tile_index: Option<usize>,
         lst_rad: f64,
         results: &mut [Jones<f64>],
+        beam_params: SkaBeamParams,
     ) -> Result<(), BeamError> {
-        let zenith_radec = RADec::from_radians(lst_rad, SKA_LATITUDE_RAD);
+        let zenith_radec = RADec::from_radians(lst_rad, beam_params.ska_latitude_rad);
         let LMN {
             l: cent_l,
             m: cent_m,
             ..
-        } = PHASE_CENTRE.to_lmn(zenith_radec);
+        } = beam_params.phase_centre.to_lmn(zenith_radec);
 
         azels
             .par_iter()
@@ -132,6 +141,7 @@ impl Beam for SkaAiryBeam {
                     zenith_radec,
                     cent_l,
                     cent_m,
+                    beam_params,
                 );
             });
         Ok(())
