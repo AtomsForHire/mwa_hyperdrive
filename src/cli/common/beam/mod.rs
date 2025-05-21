@@ -14,7 +14,10 @@ use serde::{Deserialize, Serialize};
 
 use super::{InfoPrinter, Warn};
 use crate::{
-    beam::{Beam, BeamError, BeamType, Delays, FEEBeam, NoBeam, BEAM_TYPES_COMMA_SEPARATED},
+    beam::{
+        Beam, BeamError, BeamType, Delays, FEEBeam, NoBeam, SkaBeamParams,
+        BEAM_TYPES_COMMA_SEPARATED,
+    },
     io::read::VisInputType,
 };
 
@@ -72,6 +75,7 @@ impl BeamArgs {
         data_dipole_delays: Option<Delays>,
         dipole_gains: Option<Array2<f64>>,
         input_data_type: Option<VisInputType>,
+        array_params: Option<SkaBeamParams>,
     ) -> Result<Box<dyn Beam>, BeamError> {
         let Self {
             beam_type,
@@ -231,12 +235,20 @@ impl BeamArgs {
 
             BeamType::SkaGaussian => {
                 printer.push_line("Type: SKA Gaussian".into());
-                Box::new(crate::beam::SkaGaussianBeam)
+                let params = array_params.ok_or_else(|| {
+                    BeamError::Unrecognised("No ska params created need by SkaGaussian".to_owned())
+                });
+                printer.push_line(format!("Number of tiles: {}", params.number_of_stations));
+                Box::new(crate::beam::SkaGaussianBeam::new(params))
             }
 
             BeamType::SkaAiry => {
                 printer.push_line("Type: SKA Airy".into());
-                Box::new(crate::beam::SkaAiryBeam)
+                let params = array_params.ok_or_else(|| {
+                    BeamError::Unrecognised("No ska params created need by SkaGaussian".to_owned())
+                });
+                printer.push_line(format!("Number of tiles: {}", params.number_of_stations));
+                Box::new(crate::beam::SkaAiryBeam::new(params))
             }
         };
 

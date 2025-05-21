@@ -9,6 +9,7 @@ use ndarray::prelude::*;
 use num_complex::Complex;
 use rayon::prelude::*;
 
+use super::SkaBeamParams;
 use super::{NUM_STATIONS, PHASE_CENTRE, REF_FREQ_HZ, SKA_LATITUDE_RAD};
 use crate::beam::{Beam, BeamError, BeamType};
 #[cfg(any(feature = "cuda", feature = "hip"))]
@@ -18,10 +19,24 @@ const FWHM_RAD: f64 = 0.07452555906;
 const FWHM_FACTOR: f64 = 2.35482004503;
 
 #[derive(Clone, Copy)]
-pub(crate) struct SkaGaussianBeam;
+pub(crate) struct SkaGaussianBeam {
+    pub phase_centre: RADec,
+    pub ska_site_latitude_rad: f64,
+    pub reference_frequency_hz: f64,
+    pub number_of_stations: usize,
+}
 
 /// Analytic Beam implementation.
 impl SkaGaussianBeam {
+    pub fn new(params: SkaBeamParams) -> Self {
+        Self {
+            phase_centre: params.phase_centre,
+            ska_site_latitude_rad: params.ska_latitude_rad,
+            reference_frequency_hz: params.ref_freq_hz,
+            number_of_stations: params.num_stations,
+        }
+    }
+
     /// Explicitly a 2D gaussian function
     #[allow(clippy::too_many_arguments)]
     fn gaussian_2d(

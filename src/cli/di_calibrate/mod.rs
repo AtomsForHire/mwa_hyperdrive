@@ -26,6 +26,7 @@ use super::common::{
 };
 use crate::{
     averaging::{parse_time_average_factor, timesteps_to_timeblocks, AverageFactorError},
+    beam::SkaBeamParams,
     io::write::{can_write_to_file, VIS_OUTPUT_EXTENSIONS},
     params::{DiCalParams, ModellingParams},
     solutions::{self, CalSolutionType, CalibrationSolutions, CAL_SOLUTION_EXTENSIONS},
@@ -230,12 +231,6 @@ impl DiCalArgs {
         let obs_context = input_vis_params.get_obs_context();
         let total_num_tiles = input_vis_params.get_total_num_tiles();
 
-        let beam = beam_args.parse(
-            total_num_tiles,
-            obs_context.dipole_delays.clone(),
-            obs_context.dipole_gains.clone(),
-            Some(obs_context.input_data_type),
-        )?;
         let modelling_params @ ModellingParams { apply_precession } = model_args.parse();
 
         let DiCalCliArgs {
@@ -273,6 +268,21 @@ impl DiCalArgs {
         } else {
             (precession_info.lmst, latitude_rad)
         };
+
+        let ska_beam_params = SkaBeamParams {
+            phase_centre: obs_context.phase_centre,
+            ska_site_latitude_rad: latitude_rad,
+            reference_frequency_hz: freq_centroid,
+            number_of_stations: total_num_tiles,
+        };
+
+        let beam = beam_args.parse(
+            total_num_tiles,
+            obs_context.dipole_delays.clone(),
+            obs_context.dipole_gains.clone(),
+            Some(obs_context.input_data_type),
+            ska_beam_params.clone(),
+        )?;
 
         let source_list = srclist_args.parse(
             obs_context.phase_centre,

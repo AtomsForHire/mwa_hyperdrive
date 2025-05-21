@@ -8,6 +8,7 @@ use marlu::{AzEl, Jones, RADec, LMN};
 use ndarray::prelude::*;
 use rayon::prelude::*;
 
+use super::SkaBeamParams;
 use super::{NUM_STATIONS, PHASE_CENTRE, REF_FREQ_HZ, SKA_LATITUDE_RAD};
 use crate::beam::{Beam, BeamError, BeamType};
 #[cfg(any(feature = "cuda", feature = "hip"))]
@@ -23,9 +24,23 @@ lazy_static::lazy_static! {
 }
 
 #[derive(Clone, Copy)]
-pub(crate) struct SkaAiryBeam;
+pub(crate) struct SkaAiryBeam {
+    pub phase_centre: RADec,
+    pub ska_site_latitude_rad: f64,
+    pub reference_frequency_hz: f64,
+    pub number_of_stations: usize,
+}
 
 impl SkaAiryBeam {
+    pub fn new(params: SkaBeamParams) -> Self {
+        Self {
+            phase_centre: params.phase_centre,
+            ska_site_latitude_rad: params.ska_latitude_rad,
+            reference_frequency_hz: params.ref_freq_hz,
+            number_of_stations: params.num_stations,
+        }
+    }
+
     fn calc_jones_inner(
         azel: AzEl,
         freq_hz: f64,
