@@ -14,6 +14,9 @@ pub(crate) use airy::SkaAiryBeam;
 pub(crate) use gaussian::SkaGaussianBeam;
 use marlu::RADec;
 
+use super::BeamType;
+use ndarray::prelude::*;
+
 // use std::f64::consts::FRAC_PI_6;
 //
 // const NUM_STATIONS: usize = 512;

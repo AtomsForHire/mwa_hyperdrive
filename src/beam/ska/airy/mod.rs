@@ -10,7 +10,7 @@ use rayon::prelude::*;
 
 // use super::{NUM_STATIONS, PHASE_CENTRE, REF_FREQ_HZ, SKA_LATITUDE_RAD};
 use super::SkaBeamParams;
-use crate::beam::{self, Beam, BeamError, BeamType};
+use crate::beam::{self, BeamError, BeamType, SkaBeam};
 #[cfg(any(feature = "cuda", feature = "hip"))]
 use crate::beam::{BeamGpu, DevicePointer, GpuFloat};
 
@@ -19,9 +19,9 @@ include!("bindings.rs");
 /// `scipy.special.jn_zeros(1, 1)[0] / np.pi`
 const J_ZERO_THINGY: f64 = 1.2196698912665045;
 
-lazy_static::lazy_static! {
-    static ref AIRY_CONST: f64 = PI * J_ZERO_THINGY / (5.15_f64.to_radians() * REF_FREQ_HZ);
-}
+// lazy_static::lazy_static! {
+//     static ref AIRY_CONST: f64 = PI * J_ZERO_THINGY / (5.15_f64.to_radians() * REF_FREQ_HZ);
+// }
 
 #[derive(Clone, Copy)]
 pub(crate) struct SkaAiryBeam {
@@ -38,6 +38,7 @@ impl SkaAiryBeam {
         cent_m: f64,
         beam_params: SkaBeamParams,
     ) -> Jones<f64> {
+        let airy_const = PI + J_ZERO_THINGY / (5.15_f64.to_radians() * beam_params.ref_freq_hz);
         let hadec = azel.to_hadec(beam_params.ska_latitude_rad);
         let beam_radec = hadec.to_radec(lst_rad);
         let LMN {

@@ -99,7 +99,8 @@ impl SkaBeam for SkaGaussianBeam {
     }
 
     fn get_num_tiles(&self) -> usize {
-        NUM_STATIONS
+        println!("I should not be in here!!!!!");
+        None
     }
 
     fn get_dipole_gains(&self) -> Option<ArcArray<f64, Dim<[usize; 2]>>> {
