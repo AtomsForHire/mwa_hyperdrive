@@ -9,7 +9,7 @@ use ndarray::prelude::*;
 use rayon::prelude::*;
 
 use super::SkaBeamParams;
-use super::{NUM_STATIONS, PHASE_CENTRE, REF_FREQ_HZ, SKA_LATITUDE_RAD};
+// use super::{NUM_STATIONS, PHASE_CENTRE, REF_FREQ_HZ, SKA_LATITUDE_RAD};
 use crate::beam::{Beam, BeamError, BeamType};
 #[cfg(any(feature = "cuda", feature = "hip"))]
 use crate::beam::{BeamGpu, DevicePointer, GpuFloat};
@@ -160,7 +160,7 @@ impl Beam for SkaAiryBeam {
     #[cfg(any(feature = "cuda", feature = "hip"))]
     fn prepare_gpu_beam(&self, freqs_hz: &[u32]) -> Result<Box<dyn BeamGpu>, BeamError> {
         // All "tiles" have the same response.
-        let tile_map = DevicePointer::copy_to_device(&vec![0; NUM_STATIONS])?;
+        let tile_map = DevicePointer::copy_to_device(&vec![0; self.number_of_stations])?;
         // Each frequency is distinct.
         let freq_map = DevicePointer::copy_to_device(
             &(0..freqs_hz.len())
