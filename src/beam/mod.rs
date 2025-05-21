@@ -20,7 +20,7 @@ mod tests;
 
 pub(crate) use error::BeamError;
 pub(crate) use fee::FEEBeam;
-pub(crate) use ska::{SkaAiryBeam, SkaBeam, SkaBeamParams, SkaGaussianBeam};
+pub(crate) use ska::{SkaAiryBeam, SkaGaussianBeam};
 
 use std::{path::Path, str::FromStr};
 

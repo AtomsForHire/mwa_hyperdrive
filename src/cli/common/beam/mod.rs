@@ -66,23 +66,6 @@ impl BeamArgs {
         }
     }
 
-    pub(crate) fn determine_beam_type(&self) -> Result<BeamType, BeamError> {
-        match (
-            self.no_beam,              // boolean: if --no-beam is used
-            self.beam_type.as_deref(), // Option<&str>: the string from --beam-type, if any
-            self.beam_type
-                .as_deref()
-                .and_then(|s| BeamType::from_str(s).ok()), // Tries to parse the string into BeamType enum
-        ) {
-            (true, _, _) => Ok(BeamType::None), // If --no-beam is true, it's always BeamType::None
-            (false, None, _) => Ok(BeamType::default()), // If --no-beam is false and --beam-type is not given, use default
-            (false, Some(_), Some(parsed_beam_type)) => Ok(parsed_beam_type), // Successfully parsed
-            (false, Some(unrecognized_str), None) => {
-                Err(BeamError::Unrecognised(unrecognized_str.to_string())) // Unrecognized string for beam type
-            }
-        }
-    }
-
     pub(crate) fn parse(
         self,
         total_num_tiles: usize,

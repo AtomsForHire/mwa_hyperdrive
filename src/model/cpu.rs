@@ -4,7 +4,6 @@
 
 //! Code to generate sky-model visibilities.
 
-use crate::beam::SkaBeam;
 use std::{
     borrow::Cow,
     collections::{hash_map::DefaultHasher, HashMap, HashSet},
@@ -25,7 +24,7 @@ use num_complex::Complex;
 
 use super::{shapelets, ModelError};
 use crate::{
-    beam::{Beam, BeamError, BeamType, SkaBeamParams},
+    beam::{Beam, BeamError, BeamType},
     constants::*,
     context::Polarisations,
     model::mask_pols,
@@ -65,7 +64,6 @@ pub struct SkyModellerCpu<'a> {
     unique_freqs: Vec<f64>,
 
     pub(super) pols: Polarisations,
-    pub(super) ska_beam_params: Option<&'a SkaBeamParams>,
 }
 
 impl<'a> SkyModellerCpu<'a> {
@@ -82,7 +80,6 @@ impl<'a> SkyModellerCpu<'a> {
         array_latitude_rad: f64,
         dut1: Duration,
         apply_precession: bool,
-        ska_beam_params: Option<SkaBeamParams>,
     ) -> SkyModellerCpu<'a> {
         let components = ComponentList::new(source_list, unflagged_fine_chan_freqs, phase_centre);
         let maps = crate::math::TileBaselineFlags::new(
@@ -170,7 +167,6 @@ impl<'a> SkyModellerCpu<'a> {
             unique_freqs,
             freq_map,
             pols,
-            ska_beam_params,
         }
     }
 
@@ -207,37 +203,13 @@ impl<'a> SkyModellerCpu<'a> {
                 .chunks_exact_mut(azels.len())
                 .zip(self.unique_freqs.iter())
             {
-                match self.beam.get_beam_type() {
-                    BeamType::SkaGaussian | BeamType::SkaAiry => {
-                        if let Some(ska_beam_object) =
-                            self.beam.as_any().downcast_ref::<dyn SkaBeam>()
-                        {
-                            ska_beam_object.calc_jones_array_inner(
-                                // Call your new method
-                                azels,
-                                *freq,
-                                Some(i_unique_tile),
-                                array_latitude_rad, // LST calculation latitude
-                                slice,
-                                self.ska_beam_params.as_ref(), // The SkaBeamParams from self
-                            )?;
-                        } else {
-                            // Fallback or error if downcast fails for a reported SKA type
-                            return Err(BeamError::Generic(
-                                "Beam identified as SKA but does not implement SkaBeam trait or downcast failed".to_string()
-                            ));
-                        }
-                    }
-                    _ => {
-                        self.beam.calc_jones_array_inner(
-                            azels,
-                            *freq,
-                            Some(i_unique_tile),
-                            array_latitude_rad,
-                            slice,
-                        )?;
-                    }
-                }
+                self.beam.calc_jones_array_inner(
+                    azels,
+                    *freq,
+                    Some(i_unique_tile),
+                    array_latitude_rad,
+                    slice,
+                )?;
             }
         }
 

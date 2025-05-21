@@ -24,7 +24,7 @@ use vec1::Vec1;
 use super::{InputVisParams, ModellingParams, OutputVisParams};
 use crate::{
     averaging::Timeblock,
-    beam::{Beam, SkaBeamParams},
+    beam::Beam,
     context::Polarisations,
     di_calibrate::calibrate_timeblocks,
     io::{
@@ -108,8 +108,6 @@ pub(crate) struct DiCalParams {
 
     /// Parameters for modelling.
     pub(crate) modelling_params: ModellingParams,
-
-    pub(crate) ska_beam_params: Option<SkaBeamParams>,
 }
 
 impl DiCalParams {
@@ -348,7 +346,6 @@ impl DiCalParams {
                         tx_model,
                         &error,
                         model_progress,
-                        self.ska_beam_params.clone(),
                     );
                     if result.is_err() {
                         error.store(true);
@@ -492,7 +489,6 @@ fn model_thread(
     tx: Sender<VisTimestep>,
     error: &AtomicCell<bool>,
     progress_bar: ProgressBar,
-    ska_beam_params: Option<SkaBeamParams>,
 ) -> Result<(), ModelError> {
     let obs_context = input_vis_params.get_obs_context();
     let unflagged_tile_xyzs = obs_context
@@ -525,7 +521,6 @@ fn model_thread(
         obs_context.array_position.latitude_rad,
         input_vis_params.dut1,
         apply_precession,
-        ska_beam_params,
     )?;
 
     let weight_factor = ((input_vis_params.spw.freq_res / FREQ_WEIGHT_FACTOR)

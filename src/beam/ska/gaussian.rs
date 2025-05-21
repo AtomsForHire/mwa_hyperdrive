@@ -9,9 +9,8 @@ use ndarray::prelude::*;
 use num_complex::Complex;
 use rayon::prelude::*;
 
-//use super::{NUM_STATIONS, PHASE_CENTRE, REF_FREQ_HZ, SKA_LATITUDE_RAD};
-use super::SkaBeamParams;
-use crate::beam::{Beam, BeamError, BeamType, SkaBeam};
+use super::{NUM_STATIONS, PHASE_CENTRE, REF_FREQ_HZ, SKA_LATITUDE_RAD};
+use crate::beam::{Beam, BeamError, BeamType};
 #[cfg(any(feature = "cuda", feature = "hip"))]
 use crate::beam::{BeamGpu, DevicePointer, GpuFloat};
 
@@ -71,11 +70,8 @@ impl SkaGaussianBeam {
         cent_l: f64,
         cent_m: f64,
         sigma: f64,
-        beam_params: SkaBeamParams,
     ) -> Jones<f64> {
-        let beam_radec = azel
-            .to_hadec(beam_params.ska_latitude_rad)
-            .to_radec(lst_rad);
+        let beam_radec = azel.to_hadec(SKA_LATITUDE_RAD).to_radec(lst_rad);
         let LMN {
             l: beam_l,
             m: beam_m,
@@ -93,14 +89,13 @@ impl SkaGaussianBeam {
     }
 }
 
-impl SkaBeam for SkaGaussianBeam {
+impl Beam for SkaGaussianBeam {
     fn get_beam_type(&self) -> BeamType {
         BeamType::SkaGaussian
     }
 
     fn get_num_tiles(&self) -> usize {
-        println!("I should not be in here!!!!!");
-        None
+        NUM_STATIONS
     }
 
     fn get_dipole_gains(&self) -> Option<ArcArray<f64, Dim<[usize; 2]>>> {
@@ -114,19 +109,18 @@ impl SkaBeam for SkaGaussianBeam {
         freq_hz: f64,
         _tile_index: Option<usize>,
         latitude_rad: f64,
-        beam_params: SkaBeamParams,
     ) -> Result<Jones<f64>, BeamError> {
         let lst_rad = latitude_rad;
-        let zenith_radec = RADec::from_radians(lst_rad, beam_params.ska_latitude_rad);
+        let zenith_radec = RADec::from_radians(lst_rad, SKA_LATITUDE_RAD);
         let LMN {
             l: cent_l,
             m: cent_m,
             ..
-        } = beam_params.phase_centre.to_lmn(zenith_radec);
+        } = PHASE_CENTRE.to_lmn(zenith_radec);
 
         // scale fwhm to be in l,m coords
         let fwhm_lm = FWHM_RAD.sin();
-        let std = (fwhm_lm / FWHM_FACTOR) * (beam_params.ref_freq_hz / freq_hz);
+        let std = (fwhm_lm / FWHM_FACTOR) * (REF_FREQ_HZ / freq_hz);
 
         Ok(SkaGaussianBeam::calc_jones_inner(
             azel,
@@ -135,7 +129,6 @@ impl SkaBeam for SkaGaussianBeam {
             cent_l,
             cent_m,
             std,
-            beam_params,
         ))
     }
 
@@ -145,17 +138,9 @@ impl SkaBeam for SkaGaussianBeam {
         freq_hz: f64,
         tile_index: Option<usize>,
         latitude_rad: f64,
-        beam_params: SkaBeamParams,
     ) -> Result<Vec<Jones<f64>>, BeamError> {
         let mut results = vec![Jones::default(); azels.len()];
-        self.calc_jones_array_inner(
-            azels,
-            freq_hz,
-            tile_index,
-            latitude_rad,
-            &mut results,
-            beam_params,
-        )?;
+        self.calc_jones_array_inner(azels, freq_hz, tile_index, latitude_rad, &mut results)?;
         Ok(results)
     }
 
@@ -166,19 +151,18 @@ impl SkaBeam for SkaGaussianBeam {
         _tile_index: Option<usize>,
         latitude_rad: f64,
         results: &mut [Jones<f64>],
-        beam_params: SkaBeamParams,
     ) -> Result<(), BeamError> {
         let lst_rad = latitude_rad;
-        let zenith_radec = RADec::from_radians(lst_rad, beam_params.ska_latitude_rad);
+        let zenith_radec = RADec::from_radians(lst_rad, SKA_LATITUDE_RAD);
         let LMN {
             l: cent_l,
             m: cent_m,
             ..
-        } = beam_params.phase_centre.to_lmn(zenith_radec);
+        } = PHASE_CENTRE.to_lmn(zenith_radec);
 
         // scale fwhm to be in l,m coords
         let fwhm_lm = FWHM_RAD.sin();
-        let std = (fwhm_lm / FWHM_FACTOR) * (beam_params.ref_freq_hz / freq_hz);
+        let std = (fwhm_lm / FWHM_FACTOR) * (REF_FREQ_HZ / freq_hz);
 
         azels
             .par_iter()
@@ -191,7 +175,6 @@ impl SkaBeam for SkaGaussianBeam {
                     cent_l,
                     cent_m,
                     std,
-                    beam_params,
                 );
             });
         Ok(())
@@ -353,9 +336,7 @@ mod tests {
         let beam = SkaGaussianBeam;
 
         let azel = AzEl::from_radians(2.00370398, 1.00922628);
-        let jones = beam
-            .calc_jones(azel, freq_hz, None, lst_rad, SkaBeamParams)
-            .unwrap();
+        let jones = beam.calc_jones(azel, freq_hz, None, lst_rad).unwrap();
         let expected = 0.00018248210368566883;
         assert_abs_diff_eq!(jones[0], Complex::new(expected, 0.0), epsilon = 1e-6);
         assert_abs_diff_eq!(jones[1], Complex::new(0.0, 0.0), epsilon = 1e-6);
