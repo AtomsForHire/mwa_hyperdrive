@@ -79,6 +79,7 @@ impl SkaGaussianBeam {
     }
 
     fn calc_jones_inner(
+        &self,
         azel: AzEl,
         lst_rad: f64,
         zenith_radec: RADec,
@@ -86,7 +87,7 @@ impl SkaGaussianBeam {
         cent_m: f64,
         sigma: f64,
     ) -> Jones<f64> {
-        let beam_radec = azel.to_hadec(SKA_LATITUDE_RAD).to_radec(lst_rad);
+        let beam_radec = azel.to_hadec(self.ska_site_latitude_rad).to_radec(lst_rad);
         let LMN {
             l: beam_l,
             m: beam_m,
@@ -110,7 +111,7 @@ impl Beam for SkaGaussianBeam {
     }
 
     fn get_num_tiles(&self) -> usize {
-        NUM_STATIONS
+        self.number_of_stations
     }
 
     fn get_dipole_gains(&self) -> Option<ArcArray<f64, Dim<[usize; 2]>>> {
@@ -126,18 +127,19 @@ impl Beam for SkaGaussianBeam {
         latitude_rad: f64,
     ) -> Result<Jones<f64>, BeamError> {
         let lst_rad = latitude_rad;
-        let zenith_radec = RADec::from_radians(lst_rad, SKA_LATITUDE_RAD);
+        let zenith_radec = RADec::from_radians(lst_rad, self.ska_site_latitude_rad);
         let LMN {
             l: cent_l,
             m: cent_m,
             ..
-        } = PHASE_CENTRE.to_lmn(zenith_radec);
+        } = self.phase_centre.to_lmn(zenith_radec);
 
         // scale fwhm to be in l,m coords
         let fwhm_lm = FWHM_RAD.sin();
-        let std = (fwhm_lm / FWHM_FACTOR) * (REF_FREQ_HZ / freq_hz);
+        let std = (fwhm_lm / FWHM_FACTOR) * (self.reference_frequency_hz / freq_hz);
 
         Ok(SkaGaussianBeam::calc_jones_inner(
+            self,
             azel,
             lst_rad,
             zenith_radec,
@@ -168,22 +170,23 @@ impl Beam for SkaGaussianBeam {
         results: &mut [Jones<f64>],
     ) -> Result<(), BeamError> {
         let lst_rad = latitude_rad;
-        let zenith_radec = RADec::from_radians(lst_rad, SKA_LATITUDE_RAD);
+        let zenith_radec = RADec::from_radians(lst_rad, self.ska_site_latitude_rad);
         let LMN {
             l: cent_l,
             m: cent_m,
             ..
-        } = PHASE_CENTRE.to_lmn(zenith_radec);
+        } = self.phase_centre.to_lmn(zenith_radec);
 
         // scale fwhm to be in l,m coords
         let fwhm_lm = FWHM_RAD.sin();
-        let std = (fwhm_lm / FWHM_FACTOR) * (REF_FREQ_HZ / freq_hz);
+        let std = (fwhm_lm / FWHM_FACTOR) * (self.reference_frequency_hz / freq_hz);
 
         azels
             .par_iter()
             .zip(results.par_iter_mut())
             .for_each(|(&azel, result)| {
                 *result = SkaGaussianBeam::calc_jones_inner(
+                    self,
                     azel,
                     lst_rad,
                     zenith_radec,

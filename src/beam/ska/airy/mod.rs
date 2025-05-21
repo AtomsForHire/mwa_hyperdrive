@@ -19,9 +19,9 @@ include!("bindings.rs");
 /// `scipy.special.jn_zeros(1, 1)[0] / np.pi`
 const J_ZERO_THINGY: f64 = 1.2196698912665045;
 
-lazy_static::lazy_static! {
-    static ref AIRY_CONST: f64 = PI * J_ZERO_THINGY / (5.15_f64.to_radians() * REF_FREQ_HZ);
-}
+// lazy_static::lazy_static! {
+//     static ref AIRY_CONST: f64 = PI * J_ZERO_THINGY / (5.15_f64.to_radians() * REF_FREQ_HZ);
+// }
 
 #[derive(Clone, Copy)]
 pub(crate) struct SkaAiryBeam {
@@ -42,6 +42,7 @@ impl SkaAiryBeam {
     }
 
     fn calc_jones_inner(
+        &self,
         azel: AzEl,
         freq_hz: f64,
         lst_rad: f64,
@@ -49,7 +50,9 @@ impl SkaAiryBeam {
         cent_l: f64,
         cent_m: f64,
     ) -> Jones<f64> {
-        let hadec = azel.to_hadec(SKA_LATITUDE_RAD);
+        let airy_const: f64 =
+            PI * J_ZERO_THINGY / (5.15_f64.to_radians() * self.reference_frequency_hz);
+        let hadec = azel.to_hadec(self.reference_frequency_hz);
         let beam_radec = hadec.to_radec(lst_rad);
         let LMN {
             l: beam_l,
@@ -62,7 +65,7 @@ impl SkaAiryBeam {
         // More explicit.
         // let radius = 5.15_f64.to_radians() * REF_FREQ_HZ / freq_hz;
         // let rt = dist / (radius / J_ZERO_THINGY) * PI;
-        let rt = dist * freq_hz * *AIRY_CONST;
+        let rt = dist * freq_hz * airy_const;
 
         let z = (2.0 * unsafe { j1(rt) } / rt).abs();
 
@@ -76,7 +79,7 @@ impl Beam for SkaAiryBeam {
     }
 
     fn get_num_tiles(&self) -> usize {
-        NUM_STATIONS
+        self.number_of_stations
     }
 
     fn get_dipole_gains(&self) -> Option<ArcArray<f64, Dim<[usize; 2]>>> {
@@ -92,14 +95,15 @@ impl Beam for SkaAiryBeam {
         _tile_index: Option<usize>,
         lst_rad: f64,
     ) -> Result<Jones<f64>, BeamError> {
-        let zenith_radec = RADec::from_radians(lst_rad, SKA_LATITUDE_RAD);
+        let zenith_radec = RADec::from_radians(lst_rad, self.ska_site_latitude_rad);
         let LMN {
             l: cent_l,
             m: cent_m,
             ..
-        } = PHASE_CENTRE.to_lmn(zenith_radec);
+        } = self.phase_centre.to_lmn(zenith_radec);
 
         Ok(SkaAiryBeam::calc_jones_inner(
+            self,
             azel,
             freq_hz,
             lst_rad,
@@ -129,18 +133,19 @@ impl Beam for SkaAiryBeam {
         lst_rad: f64,
         results: &mut [Jones<f64>],
     ) -> Result<(), BeamError> {
-        let zenith_radec = RADec::from_radians(lst_rad, SKA_LATITUDE_RAD);
+        let zenith_radec = RADec::from_radians(lst_rad, self.ska_site_latitude_rad);
         let LMN {
             l: cent_l,
             m: cent_m,
             ..
-        } = PHASE_CENTRE.to_lmn(zenith_radec);
+        } = self.phase_centre.to_lmn(zenith_radec);
 
         azels
             .par_iter()
             .zip(results.par_iter_mut())
             .for_each(|(&azel, result)| {
                 *result = SkaAiryBeam::calc_jones_inner(
+                    self,
                     azel,
                     freq_hz,
                     lst_rad,
