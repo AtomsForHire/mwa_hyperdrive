@@ -13,9 +13,14 @@ mod gaussian;
 pub(crate) use airy::SkaAiryBeam;
 pub(crate) use gaussian::SkaGaussianBeam;
 use marlu::RADec;
+use std::{path::Path, str::FromStr};
 
 use super::BeamType;
+use itertools::Itertools;
+use log::debug;
+use marlu::{AzEl, Jones};
 use ndarray::prelude::*;
+use strum::IntoEnumIterator;
 
 // use std::f64::consts::FRAC_PI_6;
 //

@@ -10,7 +10,7 @@ use rayon::prelude::*;
 
 // use super::{NUM_STATIONS, PHASE_CENTRE, REF_FREQ_HZ, SKA_LATITUDE_RAD};
 use super::SkaBeamParams;
-use crate::beam::{self, BeamError, BeamType, SkaBeam};
+use crate::beam::{self, Beam, BeamError, BeamType};
 #[cfg(any(feature = "cuda", feature = "hip"))]
 use crate::beam::{BeamGpu, DevicePointer, GpuFloat};
 
@@ -52,7 +52,7 @@ impl SkaAiryBeam {
         // More explicit.
         // let radius = 5.15_f64.to_radians() * REF_FREQ_HZ / freq_hz;
         // let rt = dist / (radius / J_ZERO_THINGY) * PI;
-        let rt = dist * freq_hz * *AIRY_CONST;
+        let rt = dist * freq_hz * airy_const;
 
         let z = (2.0 * unsafe { j1(rt) } / rt).abs();
 
