@@ -454,15 +454,32 @@ pub fn create_beam_object(
         }
 
         BeamType::SkaGaussian => {
-            let config = obs_context
-                .map(super::ska::SkaBeamConfig::from_obs_context)
-                .ok_or_else(|| BeamError::MissingObsContext)?;
+            debug!("Setting up a SKA Gaussian beam object");
+            let config = if let Some(obs_context) = obs_context {
+                SkaBeamConfig::new(
+                    obs_context.get_total_num_tiles(),
+                    obs_context.phase_centre,
+                    obs_context.fine_chan_freqs[0] as f64,
+                    obs_context.array_position.latitude_rad,
+                )
+            } else {
+                return Err(BeamError::MissingObsContext);
+            };
             Ok(Box::new(SkaGaussianBeam::new(config)))
         }
+
         BeamType::SkaAiry => {
-            let config = obs_context
-                .map(super::ska::SkaBeamConfig::from_obs_context)
-                .ok_or_else(|| BeamError::MissingObsContext)?;
+            debug!("Setting up a SKA Airy beam object");
+            let config = if let Some(obs_context) = obs_context {
+                SkaBeamConfig::new(
+                    obs_context.get_total_num_tiles(),
+                    obs_context.phase_centre,
+                    obs_context.fine_chan_freqs[0] as f64,
+                    obs_context.array_position.latitude_rad,
+                )
+            } else {
+                return Err(BeamError::MissingObsContext);
+            };
             Ok(Box::new(SkaAiryBeam::new(config)))
         }
     }
