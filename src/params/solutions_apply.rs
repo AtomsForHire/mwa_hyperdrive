@@ -21,6 +21,11 @@ impl SolutionsApplyParams {
             "No calibration solutions are in the input vis params; this shouldn't be possible"
         );
 
+        // self.input_vis_params.get_obs_context().polarisations
+        println!(
+            "Polarisations before run_inner(): {:?}",
+            self.input_vis_params.get_obs_context().polarisations
+        );
         VisConvertParams::run_inner(input_vis_params, output_vis_params)
     }
 }
