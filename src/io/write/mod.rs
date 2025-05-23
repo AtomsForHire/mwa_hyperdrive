@@ -260,7 +260,7 @@ pub(crate) fn write_vis(
                     tile_positions.to_vec(),
                     dut1,
                     true,
-                    marlu_mwa_obs_context.map_or(4, |ctx| ctx.polarisations.num_pols() as usize),
+                    4,
                 );
                 if let Some(marlu_mwa_obs_context) = marlu_mwa_obs_context {
                     ms.initialize_mwa(
