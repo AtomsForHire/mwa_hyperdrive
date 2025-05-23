@@ -191,7 +191,7 @@ pub(crate) fn write_vis(
         sel_baselines: unflagged_baseline_tile_pairs.to_vec(),
         avg_time: time_average_factor.get(),
         avg_freq: freq_average_factor.get(),
-        num_vis_pols: marlu_mwa_obs_context.map_or(4, |ctx| ctx.polarisations.num_pols() as usize),
+        num_vis_pols: 4, // Always use 4 polarizations (XX, XY, YX, YY) for MWA data
     };
 
     let sched_start_timestamp = match obsid {
