@@ -260,7 +260,6 @@ pub(crate) fn write_vis(
                     tile_positions.to_vec(),
                     dut1,
                     true,
-                    4,
                 );
                 if let Some(marlu_mwa_obs_context) = marlu_mwa_obs_context {
                     ms.initialize_mwa(
