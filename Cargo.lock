@@ -1313,7 +1313,8 @@ checksum = "e3c713291f52f6d5d1054476236228037131db3d05cc64ce5f58f020b7b99223"
 [[package]]
 name = "marlu"
 version = "0.10.1"
-source = "git+https://github.com/MWATelescope/Marlu?branch=SDC3#2d1acfbd7423a6b57576758efa5527ceb74e4b6c"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33477b1391477af72a79bf06ed326f7625c21d9e4cd49ddc99d5d8c0d6ba3186"
 dependencies = [
  "approx",
  "built 0.5.2",
