@@ -108,9 +108,9 @@ mod plotting {
 
         static ref POLS: [(&'static str, &'static str, RGBAColor); 1] = [
             ("g", "X", BLUE.mix(1.0)),
-            // ("D", "X", BLUE.mix(0.2)),
-            // ("D", "Y", RED.mix(0.2)),
-            // ("g", "Y", RED.mix(1.0)),
+            ("D", "X", BLUE.mix(0.2)),
+            ("D", "Y", RED.mix(0.2)),
+            ("g", "Y", RED.mix(1.0)),
         ];
     }
 
