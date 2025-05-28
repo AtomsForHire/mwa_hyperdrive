@@ -283,6 +283,8 @@ impl DiCalArgs {
             number_of_stations: total_num_tiles,
         };
 
+        println!("{:?}", ska_beam_params);
+
         let beam = beam_args.parse(
             total_num_tiles,
             obs_context.dipole_delays.clone(),
