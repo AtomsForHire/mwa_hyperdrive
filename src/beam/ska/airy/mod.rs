@@ -52,7 +52,7 @@ impl SkaAiryBeam {
     ) -> Jones<f64> {
         let airy_const: f64 =
             PI * J_ZERO_THINGY / (5.15_f64.to_radians() * self.reference_frequency_hz);
-        let hadec = azel.to_hadec(self.reference_frequency_hz);
+        let hadec = azel.to_hadec(self.ska_site_latitude_rad);
         let beam_radec = hadec.to_radec(lst_rad);
         let LMN {
             l: beam_l,
