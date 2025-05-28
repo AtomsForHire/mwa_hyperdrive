@@ -279,7 +279,7 @@ impl DiCalArgs {
         let ska_beam_params = SkaBeamParams {
             phase_centre: obs_context.phase_centre,
             ska_site_latitude_rad: latitude_rad,
-            reference_frequency_hz: 170.24e6,
+            reference_frequency_hz: freq_centroid,
             number_of_stations: total_num_tiles,
         };
 
