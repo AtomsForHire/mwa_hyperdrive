@@ -210,6 +210,10 @@ pub(crate) struct ObsContext {
     /// The polarisations included in the data. Any combinations not listed are
     /// not supported.
     pub(crate) polarisations: Polarisations,
+
+    /// Rotation of feed elements per station, assuming all feeds are rotated the same in one
+    /// station
+    pub(crate) feed_angle: Vec1<f64>,
 }
 
 impl ObsContext {

@@ -907,6 +907,9 @@ impl MsReader {
             }
         };
 
+        let feed_table = read_table(&ms, Some("FEED"));
+        let feed_angle_vec = field_table.get_col_as_vec("RECEPTOR_ANGLE")?;
+
         let obs_context = ObsContext {
             input_data_type: VisInputType::MeasurementSet,
             obsid,
@@ -933,6 +936,7 @@ impl MsReader {
             flagged_fine_chans,
             flagged_fine_chans_per_coarse_chan,
             polarisations: pols,
+            feed_angle: feed_angle_vec,
         };
 
         let ms = MsReader {
