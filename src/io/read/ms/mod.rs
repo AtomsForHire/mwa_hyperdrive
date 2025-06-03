@@ -907,8 +907,11 @@ impl MsReader {
             }
         };
 
+        println!("ATTEMPTING TO READ IN FEED TABLE");
         let mut feed_table = read_table(&ms, Some("FEED"))?;
+        println!("READ IN FEED TABLE, NOW GETTING RECEPTOR_ANGLE COL");
         let feed_angle_vec: Vec<f64> = feed_table.get_col_as_vec("RECEPTOR_ANGLE")?;
+        println!("GOT RECEPTOR_ANGLE COL");
 
         let obs_context = ObsContext {
             input_data_type: VisInputType::MeasurementSet,
