@@ -32,8 +32,8 @@ pub(crate) struct SkaAiryBeam {
     pub ska_site_latitude_rad: f64,
     pub reference_frequency_hz: f64,
     pub number_of_stations: usize,
-    pub station_angle_rad: &Vec<f64>,
-    pub feed_angle_rad: &Vec<f64>,
+    pub station_angle_rad: Vec<f64>,
+    pub feed_angle_rad: Vec<f64>,
 }
 
 impl SkaAiryBeam {
