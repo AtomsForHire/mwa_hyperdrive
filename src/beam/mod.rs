@@ -464,6 +464,8 @@ pub fn create_beam_object(
                 ska_site_latitude_rad: DEFAULT_SKA_SITE_LATITUDE_RAD,
                 reference_frequency_hz: DEFAULT_SKA_REF_FREQ_HZ,
                 number_of_stations: num_tiles, // Use num_tiles argument for number_of_stations
+                station_angle_rad: vec1!([0]),
+                feed_angle_rad: vec1!([0]),
             };
             Ok(Box::new(SkaGaussianBeam::new(default_ska_params)))
         }
@@ -476,6 +478,8 @@ pub fn create_beam_object(
                 ska_site_latitude_rad: DEFAULT_SKA_SITE_LATITUDE_RAD,
                 reference_frequency_hz: DEFAULT_SKA_REF_FREQ_HZ,
                 number_of_stations: num_tiles, // Use num_tiles argument for number_of_stations
+                station_angle_rad: vec1!([0]),
+                feed_angle_rad: vec1!([0]),
             };
             Ok(Box::new(SkaAiryBeam::new(default_ska_params)))
         }

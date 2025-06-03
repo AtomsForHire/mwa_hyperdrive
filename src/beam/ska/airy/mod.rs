@@ -14,7 +14,8 @@ use super::SkaBeamParams;
 use crate::beam::{Beam, BeamError, BeamType};
 #[cfg(any(feature = "cuda", feature = "hip"))]
 use crate::beam::{BeamGpu, DevicePointer, GpuFloat};
-use env_logger::warn;
+use log::warn;
+use vec1::Vec1;
 
 include!("bindings.rs");
 
@@ -55,7 +56,7 @@ impl SkaAiryBeam {
         zenith_radec: RADec,
         cent_l: f64,
         cent_m: f64,
-        tile_index: Opntion<usize>,
+        tile_index: Option<usize>,
     ) -> Jones<f64> {
         let index = if let Some(i) = tile_index {
             i
@@ -116,16 +117,24 @@ impl SkaAiryBeam {
         // Create rotation matrix from Jones type, since multiplication is defined already
         let r_feed = Jones::from([
             feed_angle.cos(),
+            0,
             -feed_angle.sin(),
+            0,
             feed_angle.sin(),
+            0,
             feed_angle.cos(),
+            0,
         ]);
 
         let r_parallactic = Jones::from([
             parallactic_angle_rad.cos(),
+            0,
             -parallactic_angle_rad.sin(),
+            0,
             parallactic_angle_rad.sin(),
+            0,
             parallactic_angle_rad.cos(),
+            0,
         ]);
 
         // This is the initial Jones matrix. How the X and Y dipoles are
@@ -154,7 +163,7 @@ impl Beam for SkaAiryBeam {
         &self,
         azel: AzEl,
         freq_hz: f64,
-        _tile_index: Option<usize>,
+        tile_index: Option<usize>,
         lst_rad: f64,
     ) -> Result<Jones<f64>, BeamError> {
         let zenith_radec = RADec::from_radians(lst_rad, self.ska_site_latitude_rad);
@@ -172,6 +181,7 @@ impl Beam for SkaAiryBeam {
             zenith_radec,
             cent_l,
             cent_m,
+            tile_index,
         ))
     }
 
@@ -191,7 +201,7 @@ impl Beam for SkaAiryBeam {
         &self,
         azels: &[AzEl],
         freq_hz: f64,
-        _tile_index: Option<usize>,
+        tile_index: Option<usize>,
         lst_rad: f64,
         results: &mut [Jones<f64>],
     ) -> Result<(), BeamError> {
@@ -214,6 +224,7 @@ impl Beam for SkaAiryBeam {
                     zenith_radec,
                     cent_l,
                     cent_m,
+                    tile_index,
                 );
             });
         Ok(())
