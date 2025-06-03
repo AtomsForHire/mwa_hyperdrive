@@ -26,7 +26,7 @@ const J_ZERO_THINGY: f64 = 1.2196698912665045;
 //     static ref AIRY_CONST: f64 = PI * J_ZERO_THINGY / (5.15_f64.to_radians() * REF_FREQ_HZ);
 // }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub(crate) struct SkaAiryBeam {
     pub phase_centre: RADec,
     pub ska_site_latitude_rad: f64,
@@ -43,8 +43,8 @@ impl SkaAiryBeam {
             ska_site_latitude_rad: params.ska_site_latitude_rad,
             reference_frequency_hz: params.reference_frequency_hz,
             number_of_stations: params.number_of_stations,
-            station_angle_rad: &params.station_angle_rad,
-            feed_angle_rad: &params.feed_angle_rad,
+            station_angle_rad: params.station_angle_rad,
+            feed_angle_rad: params.feed_angle_rad,
         }
     }
 
@@ -237,7 +237,8 @@ impl Beam for SkaAiryBeam {
                 .collect::<Vec<_>>(),
         )?;
         let obj = SkaAiryBeamGpu {
-            cpu_object: *self,
+            // cpu_object: *self,
+            cpu_object: self.clone(),
             freqs_hz: freqs_hz.to_vec(),
             tile_map,
             freq_map,
