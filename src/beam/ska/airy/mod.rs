@@ -26,14 +26,14 @@ const J_ZERO_THINGY: f64 = 1.2196698912665045;
 //     static ref AIRY_CONST: f64 = PI * J_ZERO_THINGY / (5.15_f64.to_radians() * REF_FREQ_HZ);
 // }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub(crate) struct SkaAiryBeam {
     pub phase_centre: RADec,
     pub ska_site_latitude_rad: f64,
     pub reference_frequency_hz: f64,
     pub number_of_stations: usize,
-    pub station_angle_rad: Vec<f64>,
-    pub feed_angle_rad: Vec<f64>,
+    pub station_angle_rad: &Vec<f64>,
+    pub feed_angle_rad: &Vec<f64>,
 }
 
 impl SkaAiryBeam {
@@ -43,8 +43,8 @@ impl SkaAiryBeam {
             ska_site_latitude_rad: params.ska_site_latitude_rad,
             reference_frequency_hz: params.reference_frequency_hz,
             number_of_stations: params.number_of_stations,
-            station_angle_rad: params.station_angle_rad,
-            feed_angle_rad: params.feed_angle_rad,
+            station_angle_rad: &params.station_angle_rad,
+            feed_angle_rad: &params.feed_angle_rad,
         }
     }
 
