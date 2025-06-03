@@ -14,7 +14,7 @@ use super::SkaBeamParams;
 use crate::beam::{Beam, BeamError, BeamType};
 #[cfg(any(feature = "cuda", feature = "hip"))]
 use crate::beam::{BeamGpu, DevicePointer, GpuFloat};
-use log::warn;
+use log::{error, warn};
 use vec1::Vec1;
 
 include!("bindings.rs");
@@ -32,8 +32,8 @@ pub(crate) struct SkaAiryBeam {
     pub ska_site_latitude_rad: f64,
     pub reference_frequency_hz: f64,
     pub number_of_stations: usize,
-    pub station_angle_rad: Vec1<f64>,
-    pub feed_angle_rad: Vec1<f64>,
+    pub station_angle_rad: Vec<f64>,
+    pub feed_angle_rad: Vec<f64>,
 }
 
 impl SkaAiryBeam {
@@ -61,11 +61,11 @@ impl SkaAiryBeam {
         let index = if let Some(i) = tile_index {
             i
         } else {
-            warn!("Warning tile index is needed for Airy beam forming!");
+            error!("Warning tile index is needed for Airy beam forming!")
         };
 
-        let station_angle = self.station_angle_rad[i];
-        let feed_angle = self.feed_angle_rad[i];
+        let station_angle = self.station_angle_rad[index];
+        let feed_angle = self.feed_angle_rad[index];
 
         let airy_const: f64 =
             PI * J_ZERO_THINGY / (5.15_f64.to_radians() * self.reference_frequency_hz);
@@ -117,24 +117,24 @@ impl SkaAiryBeam {
         // Create rotation matrix from Jones type, since multiplication is defined already
         let r_feed = Jones::from([
             feed_angle.cos(),
-            0,
+            0.0,
             -feed_angle.sin(),
-            0,
+            0.0,
             feed_angle.sin(),
-            0,
+            0.0,
             feed_angle.cos(),
-            0,
+            0.0,
         ]);
 
         let r_parallactic = Jones::from([
             parallactic_angle_rad.cos(),
-            0,
+            0.0,
             -parallactic_angle_rad.sin(),
-            0,
+            0.0,
             parallactic_angle_rad.sin(),
-            0,
+            0.0,
             parallactic_angle_rad.cos(),
-            0,
+            0.0,
         ]);
 
         // This is the initial Jones matrix. How the X and Y dipoles are
