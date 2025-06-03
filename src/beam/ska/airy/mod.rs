@@ -5,6 +5,7 @@
 use std::f64::consts::{FRAC_PI_2, PI};
 
 use marlu::{AzEl, Jones, RADec, LMN};
+use mwa_hyperbeam::fee;
 use ndarray::prelude::*;
 use rayon::prelude::*;
 
@@ -13,6 +14,7 @@ use super::SkaBeamParams;
 use crate::beam::{Beam, BeamError, BeamType};
 #[cfg(any(feature = "cuda", feature = "hip"))]
 use crate::beam::{BeamGpu, DevicePointer, GpuFloat};
+use env_logger::warn;
 
 include!("bindings.rs");
 
@@ -29,6 +31,8 @@ pub(crate) struct SkaAiryBeam {
     pub ska_site_latitude_rad: f64,
     pub reference_frequency_hz: f64,
     pub number_of_stations: usize,
+    pub station_angle_rad: Vec1<f64>,
+    pub feed_angle_rad: Vec1<f64>,
 }
 
 impl SkaAiryBeam {
@@ -38,6 +42,8 @@ impl SkaAiryBeam {
             ska_site_latitude_rad: params.ska_site_latitude_rad,
             reference_frequency_hz: params.reference_frequency_hz,
             number_of_stations: params.number_of_stations,
+            station_angle_rad: params.station_angle_rad,
+            feed_angle_rad: params.feed_angle_rad,
         }
     }
 
@@ -49,7 +55,17 @@ impl SkaAiryBeam {
         zenith_radec: RADec,
         cent_l: f64,
         cent_m: f64,
+        tile_index: Opntion<usize>,
     ) -> Jones<f64> {
+        let index = if let Some(i) = tile_index {
+            i
+        } else {
+            warn!("Warning tile index is needed for Airy beam forming!");
+        };
+
+        let station_angle = self.station_angle_rad[i];
+        let feed_angle = self.feed_angle_rad[i];
+
         let airy_const: f64 =
             PI * J_ZERO_THINGY / (5.15_f64.to_radians() * self.reference_frequency_hz);
         let hadec = azel.to_hadec(self.ska_site_latitude_rad);
@@ -60,16 +76,62 @@ impl SkaAiryBeam {
             ..
         } = beam_radec.to_lmn(zenith_radec);
 
-        let dist = ((beam_l - cent_l).powi(2) + (beam_m - cent_m).powi(2)).sqrt();
+        // Original l, m relative to phase centre
+        let l_prime = beam_l - cent_l;
+        let m_prime = beam_m - cent_m;
+
+        // Rotate source position into rotated station's coordinate frame
+        let l_station_frame = l_prime * station_angle.cos() + m_prime * station_angle.sin();
+        let m_station_frame = -l_prime * station_angle.sin() + m_prime * station_angle.cos();
+
+        // let dist = ((beam_l - cent_l).powi(2) + (beam_m - cent_m).powi(2)).sqrt();
+        let dist = (l_station_frame.powi(2) + m_station_frame.powi(2)).sqrt();
 
         // More explicit.
         // let radius = 5.15_f64.to_radians() * REF_FREQ_HZ / freq_hz;
         // let rt = dist / (radius / J_ZERO_THINGY) * PI;
         let rt = dist * freq_hz * airy_const;
 
+        // This takes into account the *station* rotation
         let z = (2.0 * unsafe { j1(rt) } / rt).abs();
 
-        Jones::from([z, 0.0, 0.0, 0.0, 0.0, 0.0, z, 0.0])
+        // Need to calculate parallactic angle from feed angle
+        // TODO: This part done with LLM, need to double check
+        let ha_rad = hadec.ha;
+        let dec_rad = hadec.dec;
+        let lat_rad = self.ska_site_latitude_rad;
+
+        let sin_h = ha_rad.sin();
+        let cos_h = ha_rad.cos();
+        let sin_d = dec_rad.sin();
+        let cos_d = dec_rad.cos();
+        let tan_l = lat_rad.tan();
+
+        // Parallactic angle psi
+        let parallactic_angle_rad = sin_h.atan2(tan_l * cos_d - sin_d * cos_h);
+
+        // Angle used for rotation
+        // let effective_angle = parallactic_angle_rad - feed_angle;
+
+        // Create rotation matrix from Jones type, since multiplication is defined already
+        let r_feed = Jones::from([
+            feed_angle.cos(),
+            -feed_angle.sin(),
+            feed_angle.sin(),
+            feed_angle.cos(),
+        ]);
+
+        let r_parallactic = Jones::from([
+            parallactic_angle_rad.cos(),
+            -parallactic_angle_rad.sin(),
+            parallactic_angle_rad.sin(),
+            parallactic_angle_rad.cos(),
+        ]);
+
+        // This is the initial Jones matrix. How the X and Y dipoles are
+        let j_initial = Jones::from([z, 0.0, 0.0, 0.0, 0.0, 0.0, z, 0.0]);
+
+        r_feed * r_parallactic * j_initial
     }
 }
 
