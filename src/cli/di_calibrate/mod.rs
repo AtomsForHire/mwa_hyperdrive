@@ -281,8 +281,8 @@ impl DiCalArgs {
             ska_site_latitude_rad: latitude_rad,
             reference_frequency_hz: freq_centroid,
             number_of_stations: total_num_tiles,
-            feed_angle_rad: obs_context.feed_angles.unwrap(), // NOTE: Doing this for my own use case!!
-            station_angle_rad: obs_context.feed_angles.unwrap(),
+            feed_angle_rad: obs_context.feed_angles.unwrap().as_ref(), // NOTE: Doing this for my own use case!!
+            station_angle_rad: obs_context.feed_angles.unwrap().as_ref(),
         };
 
         println!("{:?}", ska_beam_params);

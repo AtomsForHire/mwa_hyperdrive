@@ -26,7 +26,7 @@ const J_ZERO_THINGY: f64 = 1.2196698912665045;
 //     static ref AIRY_CONST: f64 = PI * J_ZERO_THINGY / (5.15_f64.to_radians() * REF_FREQ_HZ);
 // }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub(crate) struct SkaAiryBeam {
     pub phase_centre: RADec,
     pub ska_site_latitude_rad: f64,
@@ -58,11 +58,7 @@ impl SkaAiryBeam {
         cent_m: f64,
         tile_index: Option<usize>,
     ) -> Jones<f64> {
-        let index = if let Some(i) = tile_index {
-            i
-        } else {
-            error!("Warning tile index is needed for Airy beam forming!")
-        };
+        let index = tile_index.expect("Warning tile index is needed for Airy beam forming");
 
         let station_angle = self.station_angle_rad[index];
         let feed_angle = self.feed_angle_rad[index];
