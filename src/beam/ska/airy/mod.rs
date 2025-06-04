@@ -208,6 +208,8 @@ impl Beam for SkaAiryBeam {
             ..
         } = self.phase_centre.to_lmn(zenith_radec);
 
+        println!("IM HERE IM HERE IM HERE TILE_IDX: {:?}", tile_index);
+
         azels
             .par_iter()
             .zip(results.par_iter_mut())

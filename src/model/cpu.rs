@@ -207,7 +207,7 @@ impl<'a> SkyModellerCpu<'a> {
                 self.beam.calc_jones_array_inner(
                     azels,
                     *freq,
-                    Some(i_tile),
+                    Some(i_unique_tile),
                     array_latitude_rad,
                     slice,
                 )?;
