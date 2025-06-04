@@ -13,7 +13,7 @@ use std::{
 };
 
 use hifitime::{Duration, Epoch};
-use log::debug;
+use log::{debug, info};
 use marlu::{
     c64,
     pos::xyz::xyzs_to_cross_uvws,
@@ -152,7 +152,7 @@ impl<'a> SkyModellerCpu<'a> {
             freq_map.push(this_freq_index);
         }
 
-        println!("UNIQUE TILES: {:?}", unique_tiles);
+        info!("UNIQUE TILES: {:?}", unique_tiles);
         io::stdout().flush().unwrap();
         SkyModellerCpu {
             beam,
@@ -190,7 +190,7 @@ impl<'a> SkyModellerCpu<'a> {
             ));
         }
 
-        println!(
+        info!(
             "BEAMTYPE IS NOT NONE, UNIQUE_TILES IN GET_BEAM_RESPONSES: {:?}",
             self.unique_tiles
         );
