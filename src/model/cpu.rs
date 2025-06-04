@@ -9,6 +9,7 @@ use std::{
     collections::{hash_map::DefaultHasher, HashMap, HashSet},
     f64::consts::{FRAC_PI_2, LN_2},
     hash::{Hash, Hasher},
+    io,
 };
 
 use hifitime::{Duration, Epoch};
@@ -152,6 +153,7 @@ impl<'a> SkyModellerCpu<'a> {
         }
 
         println!("UNIQUE TILES: {:?}", unique_tiles);
+        io::stdout().flush().unwrap();
         SkyModellerCpu {
             beam,
             phase_centre,
@@ -192,6 +194,7 @@ impl<'a> SkyModellerCpu<'a> {
             "BEAMTYPE IS NOT NONE, UNIQUE_TILES IN GET_BEAM_RESPONSES: {:?}",
             self.unique_tiles
         );
+        io::stdout().flush().unwrap();
 
         let mut beam_responses = Array3::zeros((
             self.unique_tiles.len(),
