@@ -134,6 +134,8 @@ impl<'a> SkyModellerCpu<'a> {
             tile_index_to_array_index_map.push(index);
         }
 
+        println!("NUM GAIN ROWS: {:?}", gains.rows());
+        println!("NUM DELAYS ROWS: {:?}", delays.rows());
         println!("NUM UNFLAGGED_TILES: {:?}", unflagged_tile_xyzs.len());
         println!("NUM UNFLAGGED_TILES: {:?}", flagged_tiles.len());
         println!("UNIQUE_TILES: {:?}", unique_tiles);
