@@ -914,7 +914,8 @@ impl MsReader {
         for row_idx in 0..num_rows {
             match feed_table.get_cell_as_vec("RECEPTOR_ANGLE", row_idx) {
                 Ok(angles) => {
-                    feed_angle_vec.push(angles[1]);
+                    feed_angle_vec.push(angles[1]); // The Y dipole is the feed angle I set in the
+                                                    // telescope model.
                 }
                 Err(e) => {
                     eprintln!("Error! Could not get feed angle for row {}", row_idx);
