@@ -123,7 +123,9 @@ fn calc_cpu(args: &BeamArgs) -> Result<(), HyperdriveError> {
     let azels: Vec<_> = gen_azzas(max_za.to_radians(), step.to_radians())
         .map(|(az, za)| AzEl::from_radians(az, FRAC_PI_2 - za))
         .collect();
-    let jones = beam.calc_jones_array(&azels, freq_mhz * 1e6, None, latitude_deg.to_radians())?;
+    let jones = beam.calc_jones_array(&azels, freq_mhz * 1e6, Some(0), latitude_deg.to_radians())?; // Putting
+    // tile_index = Some(0) here, not sure if this is supposed to be some generic utility function.
+    // Seems like it
     for (j, azel) in jones.into_iter().zip(azels) {
         writeln!(
             &mut out,
