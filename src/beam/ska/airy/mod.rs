@@ -58,7 +58,8 @@ impl SkaAiryBeam {
         cent_m: f64,
         tile_index: Option<usize>,
     ) -> Jones<f64> {
-        let index = tile_index.expect("Warning tile index is needed for Airy beam forming");
+        // let index = tile_index.expect("Warning tile index is needed for Airy beam forming");
+        let index = tile_index.or(0);
 
         let station_angle = self.station_angle_rad[index];
         let feed_angle = self.feed_angle_rad[index];
