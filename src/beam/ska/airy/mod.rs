@@ -58,9 +58,11 @@ impl SkaAiryBeam {
         cent_m: f64,
         tile_index: Option<usize>,
     ) -> Jones<f64> {
-        // let index = tile_index.expect("Warning tile index is needed for Airy beam forming");
-        let index = tile_index.unwrap_or(0 as usize);
+        let index = tile_index.expect("Warning tile index is needed for Airy beam forming");
+        // let index = tile_index.unwrap_or(0 as usize); // Uncomment this for debugging, lets
+        // program run all the way through
 
+        // These are euler angles
         let station_angle = self.station_angle_rad[index];
         let feed_angle = self.feed_angle_rad[index];
 
@@ -75,12 +77,13 @@ impl SkaAiryBeam {
         } = beam_radec.to_lmn(zenith_radec);
 
         // Original l, m relative to phase centre
+        // the original quantities are relative to zenith
         let l_prime = beam_l - cent_l;
         let m_prime = beam_m - cent_m;
 
         // Rotate source position into rotated station's coordinate frame
-        let l_station_frame = l_prime * station_angle.cos() + m_prime * station_angle.sin();
-        let m_station_frame = -l_prime * station_angle.sin() + m_prime * station_angle.cos();
+        let l_station_frame = l_prime * station_angle.cos() - m_prime * station_angle.sin();
+        let m_station_frame = l_prime * station_angle.sin() + m_prime * station_angle.cos();
 
         // let dist = ((beam_l - cent_l).powi(2) + (beam_m - cent_m).powi(2)).sqrt();
         let dist = (l_station_frame.powi(2) + m_station_frame.powi(2)).sqrt();
@@ -209,7 +212,7 @@ impl Beam for SkaAiryBeam {
             ..
         } = self.phase_centre.to_lmn(zenith_radec);
 
-        println!("IM HERE IM HERE IM HERE TILE_IDX: {:?}", tile_index);
+        //println!("IM HERE IM HERE IM HERE TILE_IDX: {:?}", tile_index);
 
         azels
             .par_iter()
@@ -232,6 +235,7 @@ impl Beam for SkaAiryBeam {
     #[cfg(any(feature = "cuda", feature = "hip"))]
     fn prepare_gpu_beam(&self, freqs_hz: &[u32]) -> Result<Box<dyn BeamGpu>, BeamError> {
         // All "tiles" have the same response.
+        // TODO: Do I need to change this for rotated stations?
         let tile_map = DevicePointer::copy_to_device(&vec![0; self.number_of_stations])?;
         // Each frequency is distinct.
         let freq_map = DevicePointer::copy_to_device(
@@ -356,7 +360,7 @@ impl BeamGpu for SkaAiryBeamGpu {
     }
 
     fn get_num_unique_tiles(&self) -> i32 {
-        1
+        self.SkaAiryBeam.station_angle_rad.len();
     }
 
     fn get_num_unique_freqs(&self) -> i32 {
