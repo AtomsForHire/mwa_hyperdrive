@@ -151,7 +151,7 @@ impl<'a> SkyModellerCpu<'a> {
             freq_map.push(this_freq_index);
         }
 
-        println!("UNIQUE TILES: {}", unique_tiles);
+        println!("UNIQUE TILES: {:?}", unique_tiles);
         SkyModellerCpu {
             beam,
             phase_centre,
@@ -189,7 +189,7 @@ impl<'a> SkyModellerCpu<'a> {
         }
 
         println!(
-            "BEAMTYPE IS NOT NONE, UNIQUE_TILES IN GET_BEAM_RESPONSES: {}",
+            "BEAMTYPE IS NOT NONE, UNIQUE_TILES IN GET_BEAM_RESPONSES: {:?}",
             self.unique_tiles
         );
 
