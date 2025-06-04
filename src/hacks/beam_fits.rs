@@ -213,7 +213,8 @@ impl BeamFitsArgs {
         let new_data = ndarray::Array3::from_shape_fn((naxis3, naxis2, naxis1), |(k, j, i)| {
             let azel = azels[(j, i)];
             let jones = beam
-                .calc_jones(azel, freqs[k] as f64, None, lst_rad as f64)
+                .calc_jones(azel, freqs[k] as f64, Some(0), lst_rad as f64) // Again put Some(0)
+                // instead of None for tile_idx when working with SkaAiryBeam
                 .unwrap();
             jones[0].norm() as f32
         });
