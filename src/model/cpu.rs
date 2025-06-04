@@ -134,6 +134,8 @@ impl<'a> SkyModellerCpu<'a> {
             tile_index_to_array_index_map.push(index);
         }
 
+        println!("UNIQUE_TILES: {:?}", unique_tiles);
+
         let mut unique_beam_freqs = vec![];
         let mut unique_freqs = vec![];
         let mut freq_map = vec![];
@@ -207,7 +209,7 @@ impl<'a> SkyModellerCpu<'a> {
                 self.beam.calc_jones_array_inner(
                     azels,
                     *freq,
-                    Some(i_tile),
+                    Some(i_unique_tile),
                     array_latitude_rad,
                     slice,
                 )?;
