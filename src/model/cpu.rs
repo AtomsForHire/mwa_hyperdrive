@@ -152,8 +152,6 @@ impl<'a> SkyModellerCpu<'a> {
             freq_map.push(this_freq_index);
         }
 
-        info!("UNIQUE TILES: {:?}", unique_tiles);
-        io::stdout().flush().unwrap();
         SkyModellerCpu {
             beam,
             phase_centre,
@@ -189,12 +187,6 @@ impl<'a> SkyModellerCpu<'a> {
                 Jones::identity(),
             ));
         }
-
-        info!(
-            "BEAMTYPE IS NOT NONE, UNIQUE_TILES IN GET_BEAM_RESPONSES: {:?}",
-            self.unique_tiles
-        );
-        io::stdout().flush().unwrap();
 
         let mut beam_responses = Array3::zeros((
             self.unique_tiles.len(),

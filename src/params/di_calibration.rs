@@ -523,6 +523,8 @@ fn model_thread(
         apply_precession,
     )?;
 
+    info!("{:?}", modeller.unique_tiles);
+
     let weight_factor = ((input_vis_params.spw.freq_res / FREQ_WEIGHT_FACTOR)
         * (input_vis_params.time_res.to_seconds() / TIME_WEIGHT_FACTOR))
         as f32;
