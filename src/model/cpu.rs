@@ -9,7 +9,7 @@ use std::{
     collections::{hash_map::DefaultHasher, HashMap, HashSet},
     f64::consts::{FRAC_PI_2, LN_2},
     hash::{Hash, Hasher},
-    io,
+    io::{self, Write},
 };
 
 use hifitime::{Duration, Epoch};
