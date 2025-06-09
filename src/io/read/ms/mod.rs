@@ -930,17 +930,19 @@ impl MsReader {
         let num_rows = phased_array_table.n_rows();
         let mut feed_coordinates: Vec<ndarray::Array2<f64>> = vec![];
         for row_idx in 0..num_rows {
-            match phased_array_table.get_cell::<ndarray::Array2<f64>>("ELEMENT_OFFSET", row_idx) {
-                Ok(offsets) => {
-                    feed_coordinates.push(offsets);
-                }
-                Err(e) => {
-                    eprintln!(
-                        "Error! Could not get feed offsets for row {}\n{}",
-                        row_idx, e
-                    );
-                }
-            }
+            // match phased_array_table.get_cell::<ndarray::Array2<f64>>("ELEMENT_OFFSET", row_idx) {
+            //     Ok(offsets) => {
+            //         feed_coordinates.push(offsets);
+            //     }
+            //     Err(e) => {
+            //         eprintln!(
+            //             "Error! Could not get feed offsets for row {}\n{}",
+            //             row_idx, e
+            //         );
+            //     }
+            // }
+            let res = phased_array_table.get_cell_as_vec("ELEMENT_OFFSET", row_idx)?;
+            println("ELEMENT_OFFSET IS {:?}", res);
         }
 
         let obs_context = ObsContext {
