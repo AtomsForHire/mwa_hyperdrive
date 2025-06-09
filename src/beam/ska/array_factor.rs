@@ -121,6 +121,7 @@ impl SkaArrayFactorBeam {
         // let j_initial = Jones::from([xx, 0.0, 0.0, 0.0, 0.0, 0.0, yy, 0.0]);
         let j_initial = Jones::from([xx, Complex::new(0.0, 0.0), Complex::new(0.0, 0.0), yy]);
 
+        println!("{:?}", j_initial);
         j_initial
     }
 }
