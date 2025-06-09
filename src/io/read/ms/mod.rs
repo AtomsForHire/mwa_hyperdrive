@@ -907,6 +907,8 @@ impl MsReader {
             }
         };
 
+        // Read in feed angle. By default OSKAR saves only one feed angle per station in an [X Y]
+        // array
         let mut feed_table = read_table(&ms, Some("FEED"))?;
         let num_rows = feed_table.n_rows();
         // let feed_angle_vec: Vec<f64> = feed_table.get_col_as_vec("RECEPTOR_ANGLE")?;
@@ -919,6 +921,21 @@ impl MsReader {
                 }
                 Err(e) => {
                     eprintln!("Error! Could not get feed angle for row {}", row_idx);
+                }
+            }
+        }
+
+        // Read in feed element offsets for each antenna/station
+        let mut phased_array_table = read_table(&ms, Some("PHASED_ARRAY"))?;
+        let num_rows = feed_table.n_rows();
+        let mut feed_coordinates: Vec<ndarray::Array2<f64>> = vec![];
+        for row_idx in 0..num_rows {
+            match phased_array_table.get_cell("ELEMENT_OFFSET", row) {
+                Ok(offsets) => {
+                    feed_coordinates.push(offsets);
+                }
+                Err(e) => {
+                    eprintln!("Error! Could not get feed offsets for row {}", row_idx);
                 }
             }
         }
@@ -950,6 +967,7 @@ impl MsReader {
             flagged_fine_chans_per_coarse_chan,
             polarisations: pols,
             feed_angles: Some(feed_angle_vec),
+            feed_coordindates: Some(feed_coordinates),
         };
 
         let ms = MsReader {
