@@ -941,7 +941,7 @@ impl MsReader {
             //         );
             //     }
             // }
-            let res = row.get_cell("ELEMENT_OFFSET")?;
+            let res: Array2<f64> = row.get_cell("ELEMENT_OFFSET")?;
             println!("ELEMENT_OFFSET IS {:?}", res);
             Ok(())
         });
