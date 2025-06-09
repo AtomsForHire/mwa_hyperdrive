@@ -920,14 +920,14 @@ impl MsReader {
                                                     // telescope model.
                 }
                 Err(e) => {
-                    eprintln!("Error! Could not get feed angle for row {}", row_idx);
+                    eprintln!("Error! Could not get feed angle for row {}\n{}", row_idx, e);
                 }
             }
         }
 
         // Read in feed element offsets for each antenna/station
         let mut phased_array_table = read_table(&ms, Some("PHASED_ARRAY"))?;
-        let num_rows = feed_table.n_rows();
+        let num_rows = phased_array_table.n_rows();
         let mut feed_coordinates: Vec<ndarray::Array2<f64>> = vec![];
         for row_idx in 0..num_rows {
             match phased_array_table.get_cell("ELEMENT_OFFSET", row_idx) {
@@ -935,7 +935,10 @@ impl MsReader {
                     feed_coordinates.push(offsets);
                 }
                 Err(e) => {
-                    eprintln!("Error! Could not get feed offsets for row {}", row_idx);
+                    eprintln!(
+                        "Error! Could not get feed offsets for row {}\n{}",
+                        row_idx, e
+                    );
                 }
             }
         }

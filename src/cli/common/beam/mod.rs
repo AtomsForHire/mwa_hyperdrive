@@ -275,7 +275,7 @@ impl BeamArgs {
             }
 
             BeamType::SkaArrayFactor => {
-                printer.push_line("Type: SKA Airy".into());
+                printer.push_line("Type: SKA Array Factor".into());
                 let params = array_params.ok_or_else(|| {
                     BeamError::Unrecognised("No ska params created need by SkaGaussian".to_owned())
                 })?;
