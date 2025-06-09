@@ -935,10 +935,9 @@ impl MsReader {
                     "Error! Failed to get feed element offsets from PHASED_ARRAY/ELEMENT_OFFSET table: {} ",
                     err
                 )
-            });
+            })?;
 
-            let offsets = res?;
-            feed_coordinates.push(offsets);
+            feed_coordinates.push(res);
             Ok(())
         })?;
 
