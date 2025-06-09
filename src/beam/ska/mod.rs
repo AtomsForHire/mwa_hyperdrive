@@ -8,22 +8,24 @@
 //! Warning: `latitude_rad` is used for LST.
 
 mod airy;
+mod array_factor;
 mod gaussian;
 
 pub(crate) use airy::SkaAiryBeam;
+pub(crate) use array_factor::SkaArrayFactorBeam;
 pub(crate) use gaussian::SkaGaussianBeam;
 
 use std::f64::consts::FRAC_PI_6;
 
 use marlu::RADec;
 
-const NUM_STATIONS: usize = 512;
-const PHASE_CENTRE: RADec = RADec {
-    ra: 0.0,
-    dec: -FRAC_PI_6,
-};
-const REF_FREQ_HZ: f64 = 106e6;
-const SKA_LATITUDE_RAD: f64 = -0.4681797212;
+// const NUM_STATIONS: usize = 512;
+// const PHASE_CENTRE: RADec = RADec {
+//     ra: 0.0,
+//     dec: -FRAC_PI_6,
+// };
+// const REF_FREQ_HZ: f64 = 106e6;
+// const SKA_LATITUDE_RAD: f64 = -0.4681797212;
 
 #[derive(Clone, Debug)]
 pub struct SkaBeamParams {
@@ -31,6 +33,7 @@ pub struct SkaBeamParams {
     pub ska_site_latitude_rad: f64,
     pub reference_frequency_hz: f64,
     pub number_of_stations: usize,
-    pub station_angle_rad: Vec<f64>,
-    pub feed_angle_rad: Vec<f64>,
+    pub station_angle_rad: Option<Vec<f64>>,
+    pub feed_angle_rad: Option<Vec<f64>>,
+    pub feed_coordinates: Option<Vec<ndarray::Array2<f64>>>,
 }

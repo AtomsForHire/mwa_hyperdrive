@@ -1,7 +1,3 @@
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
-
 use std::f64::consts::{FRAC_PI_2, PI};
 
 use marlu::{AzEl, Jones, RADec, LMN};
@@ -10,37 +6,39 @@ use ndarray::prelude::*;
 use rayon::prelude::*;
 
 use super::SkaBeamParams;
-// use super::{NUM_STATIONS, PHASE_CENTRE, REF_FREQ_HZ, SKA_LATITUDE_RAD};
 use crate::beam::{Beam, BeamError, BeamType};
 #[cfg(any(feature = "cuda", feature = "hip"))]
 use crate::beam::{BeamGpu, DevicePointer, GpuFloat};
 use log::{error, warn};
 use vec1::Vec1;
 
-include!("bindings.rs");
-
-/// `scipy.special.jn_zeros(1, 1)[0] / np.pi`
-const J_ZERO_THINGY: f64 = 1.2196698912665045;
-
-// lazy_static::lazy_static! {
-//     static ref AIRY_CONST: f64 = PI * J_ZERO_THINGY / (5.15_f64.to_radians() * REF_FREQ_HZ);
-// }
-
 #[derive(Clone)]
-pub(crate) struct SkaAiryBeam {
+pub(crate) struct SkaArrayFactorBeam {
     pub phase_centre: RADec,
     pub ska_site_latitude_rad: f64,
     pub reference_frequency_hz: f64,
     pub number_of_stations: usize,
+    pub station_angle_rad: Vec<f64>,
+    pub feed_angle_rad: Vec<f64>,
+    pub feed_coordinates: Vec<f64>,
 }
 
-impl SkaAiryBeam {
+impl SkaArrayFactorBeam {
     pub fn new(params: SkaBeamParams) -> Self {
         Self {
             phase_centre: params.phase_centre,
             ska_site_latitude_rad: params.ska_site_latitude_rad,
             reference_frequency_hz: params.reference_frequency_hz,
             number_of_stations: params.number_of_stations,
+            station_angle_rad: params
+                .station_angle_rad
+                .expect("Error! I need a station angles for array factor beam"),
+            feed_angle_rad: params
+                .feed_angle_rad
+                .expect("Error! I need feed angles for array factor beam"),
+            feed_coordinates: params
+                .feed_coordinates
+                .expect("Error! I need feed coordinates for array factor beam"),
         }
     }
 
@@ -52,34 +50,54 @@ impl SkaAiryBeam {
         zenith_radec: RADec,
         cent_l: f64,
         cent_m: f64,
-        _tile_index: Option<usize>,
+        tile_index: Option<usize>,
     ) -> Jones<f64> {
-        let airy_const: f64 =
-            PI * J_ZERO_THINGY / (5.15_f64.to_radians() * self.reference_frequency_hz);
+        let index = tile_index.expect("Warning tile index is needed for Airy beam forming");
+        // let index = tile_index.unwrap_or(0 as usize); // Uncomment this for debugging, lets
+        // program run all the way through
+
+        // These are euler angles
+        let station_angle = self.station_angle_rad[index];
+        let feed_angle = self.feed_angle_rad[index];
+
         let hadec = azel.to_hadec(self.ska_site_latitude_rad);
         let beam_radec = hadec.to_radec(lst_rad);
         let LMN {
             l: beam_l,
             m: beam_m,
             ..
-        } = beam_radec.to_lmn(zenith_radec);
+        } = beam_radec.to_lmn(zenith_radec); // Where the beam is pointing relative to zenith, in
+                                             // the (l,m) plane
 
-        let dist = ((beam_l - cent_l).powi(2) + (beam_m - cent_m).powi(2)).sqrt();
+        // 1. Station rotation
+        // The station rotation information, when using the array factor method, is already
+        // implicitly included in the coordinates of the elements. We do not need to apply extra
+        // rotation for it.
 
-        // More explicit.
-        // let radius = 5.15_f64.to_radians() * REF_FREQ_HZ / freq_hz;
-        // let rt = dist / (radius / J_ZERO_THINGY) * PI;
-        let rt = dist * freq_hz * airy_const;
+        // 2. Feed rotation
+        // Create rotation matrix from Jones type, since multiplication is defined already
+        let r_feed = Jones::from([
+            feed_angle.cos(),
+            0.0,
+            -feed_angle.sin(),
+            0.0,
+            feed_angle.sin(),
+            0.0,
+            feed_angle.cos(),
+            0.0,
+        ]);
 
-        // This takes into account the *station* rotation
-        let z = (2.0 * unsafe { j1(rt) } / rt).abs();
+        // 3. Parallactic angle
+        // Since sky model is unpolarised, no need to take this into account.
 
         // This is the initial Jones matrix. How the X and Y dipoles are
         let j_initial = Jones::from([z, 0.0, 0.0, 0.0, 0.0, 0.0, z, 0.0]);
+
+        r_feed * r_parallactic * j_initial
     }
 }
 
-impl Beam for SkaAiryBeam {
+impl Beam for SkaArrayFactorBeam {
     fn get_beam_type(&self) -> BeamType {
         BeamType::SkaAiry
     }
@@ -108,7 +126,7 @@ impl Beam for SkaAiryBeam {
             ..
         } = self.phase_centre.to_lmn(zenith_radec);
 
-        Ok(SkaAiryBeam::calc_jones_inner(
+        Ok(SkaArrayFactorBeam::calc_jones_inner(
             self,
             azel,
             freq_hz,
@@ -153,7 +171,7 @@ impl Beam for SkaAiryBeam {
             .par_iter()
             .zip(results.par_iter_mut())
             .for_each(|(&azel, result)| {
-                *result = SkaAiryBeam::calc_jones_inner(
+                *result = SkaArrayFactorBeam::calc_jones_inner(
                     self,
                     azel,
                     freq_hz,
@@ -178,7 +196,7 @@ impl Beam for SkaAiryBeam {
                 .map(|usize| usize as i32)
                 .collect::<Vec<_>>(),
         )?;
-        let obj = SkaAiryBeamGpu {
+        let obj = SkaArrayFactorBeamGpu {
             // cpu_object: *self,
             cpu_object: self.clone(),
             freqs_hz: freqs_hz.to_vec(),
@@ -208,15 +226,15 @@ impl Beam for SkaAiryBeam {
 }
 
 #[cfg(any(feature = "cuda", feature = "hip"))]
-pub(crate) struct SkaAiryBeamGpu {
-    cpu_object: SkaAiryBeam,
+pub(crate) struct SkaArrayFactorBeamGpu {
+    cpu_object: SkaArrayFactorBeam,
     freqs_hz: Vec<u32>,
     tile_map: DevicePointer<i32>,
     freq_map: DevicePointer<i32>,
 }
 
 #[cfg(any(feature = "cuda", feature = "hip"))]
-impl BeamGpu for SkaAiryBeamGpu {
+impl BeamGpu for SkaArrayFactorBeamGpu {
     unsafe fn calc_jones_pair(
         &self,
         az_rad: &[GpuFloat],
@@ -295,7 +313,7 @@ impl BeamGpu for SkaAiryBeamGpu {
     }
 
     fn get_num_unique_tiles(&self) -> i32 {
-        self.SkaAiryBeam.station_angle_rad.len();
+        self.SkaArrayFactorBeam.station_angle_rad.len();
     }
 
     fn get_num_unique_freqs(&self) -> i32 {
@@ -313,7 +331,7 @@ mod tests {
     fn test_airy_calc_jones_inner() {
         let freq_hz = 106000000.;
         let lst_rad = 5.769848203643869;
-        let beam = SkaAiryBeam;
+        let beam = SkaArrayFactorBeam;
 
         let azel = AzEl::from_radians(2.00370398, 1.00922628);
         let jones = beam.calc_jones(azel, freq_hz, None, lst_rad).unwrap();
