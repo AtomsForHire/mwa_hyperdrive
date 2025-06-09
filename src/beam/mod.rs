@@ -20,7 +20,7 @@ mod tests;
 
 pub(crate) use error::BeamError;
 pub(crate) use fee::FEEBeam;
-pub(crate) use ska::{SkaAiryBeam, SkaBeamParams, SkaGaussianBeam};
+pub(crate) use ska::{SkaAiryBeam, SkaArrayFactorBeam, SkaBeamParams, SkaGaussianBeam};
 
 use std::{path::Path, str::FromStr};
 
@@ -501,7 +501,7 @@ pub fn create_beam_object(
                 feed_angle_rad: None,
                 feed_coordinates: None,
             };
-            Ok(Box::new(SkaArrayFactor::new(default_ska_params)))
+            Ok(Box::new(SkaArrayFactorBeam::new(default_ska_params)))
         }
     }
 }
