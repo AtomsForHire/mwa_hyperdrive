@@ -941,7 +941,7 @@ impl MsReader {
             //         );
             //     }
             // }
-            let res = phased_array_table.get_cell_as_vec("ELEMENT_OFFSET", row_idx)?;
+            let res: Vec<T> = phased_array_table.get_cell_as_vec("ELEMENT_OFFSET", row_idx)?;
             println!("ELEMENT_OFFSET IS {:?}", res);
         }
 
