@@ -63,7 +63,7 @@ impl SkaArrayFactorBeam {
         let feed_angle = self.feed_angle_rad[index];
 
         // get element coordinates
-        let coordinates: Array2<f64> = self.feed_coordinates[index];
+        let coordinates: Array2<f64> = &self.feed_coordinates[index];
         let num_elems = coordinates.nrows();
 
         // Convert frequency to wavelength
