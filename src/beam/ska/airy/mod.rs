@@ -71,7 +71,6 @@ impl SkaAiryBeam {
         // let rt = dist / (radius / J_ZERO_THINGY) * PI;
         let rt = dist * freq_hz * airy_const;
 
-        // This takes into account the *station* rotation
         let z = (2.0 * unsafe { j1(rt) } / rt).abs();
 
         // This is the initial Jones matrix. How the X and Y dipoles are

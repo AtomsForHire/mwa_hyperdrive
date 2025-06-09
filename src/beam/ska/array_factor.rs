@@ -10,7 +10,11 @@ use crate::beam::{Beam, BeamError, BeamType};
 #[cfg(any(feature = "cuda", feature = "hip"))]
 use crate::beam::{BeamGpu, DevicePointer, GpuFloat};
 use log::{error, warn};
+use num_complex::*;
 use vec1::Vec1;
+
+use std::f64::consts::PI;
+const SPEED_OF_LIGHT: f64 = 299792458.0;
 
 #[derive(Clone)]
 pub(crate) struct SkaArrayFactorBeam {
@@ -52,13 +56,19 @@ impl SkaArrayFactorBeam {
         cent_m: f64,
         tile_index: Option<usize>,
     ) -> Jones<f64> {
-        let index = tile_index.expect("Warning tile index is needed for Airy beam forming");
+        let index = tile_index.expect("Error! tile_index is needed for array factor beam forming");
         // let index = tile_index.unwrap_or(0 as usize); // Uncomment this for debugging, lets
         // program run all the way through
 
         // These are euler angles
-        let station_angle = self.station_angle_rad[index];
         let feed_angle = self.feed_angle_rad[index];
+
+        // get element coordinates
+        let coordinates: Array2<f64> = self.feed_coordinates[index];
+        let num_elems = coordinates.nrows();
+
+        // Convert frequency to wavelength
+        let lambda = SPEED_OF_LIGHT / freq_hz;
 
         let hadec = azel.to_hadec(self.ska_site_latitude_rad);
         let beam_radec = hadec.to_radec(lst_rad);
@@ -73,6 +83,24 @@ impl SkaArrayFactorBeam {
         // The station rotation information, when using the array factor method, is already
         // implicitly included in the coordinates of the elements. We do not need to apply extra
         // rotation for it.
+        let mut station_beam_x_theta = Complex::from(0.0);
+        let mut station_beam_y_theta = Complex::from(0.0);
+        // TODO: What to do with the phi components?
+        // let mut station_beam_x_phi = Complex::from(0.0);
+        // let mut station_beam_y_phi = Complex::from(0.0);
+        for i in 0..num_elems {
+            let x_loc = coordinates[[i, 0]];
+            let y_loc = coordinates[[i, 1]];
+            // Add up phases
+            let tot_phase = (x_loc / lambda * (beam_l) + y_loc / lambda * (beam_m));
+            let angle = -2.0 * PI * tot_phase;
+            station_beam_x_theta += Complex::from_polar(1.0, -angle);
+            station_beam_x_theta += Complex::from_polar(1.0, -angle);
+        }
+
+        // Get beam response
+        let xx = station_beam_x_theta * station_beam_x_theta.conj();
+        let yy = station_beam_y_theta * station_beam_y_theta.conj();
 
         // 2. Feed rotation
         // Create rotation matrix from Jones type, since multiplication is defined already
@@ -91,9 +119,9 @@ impl SkaArrayFactorBeam {
         // Since sky model is unpolarised, no need to take this into account.
 
         // This is the initial Jones matrix. How the X and Y dipoles are
-        let j_initial = Jones::from([z, 0.0, 0.0, 0.0, 0.0, 0.0, z, 0.0]);
+        let j_initial = Jones::from([xx, 0.0, 0.0, 0.0, 0.0, 0.0, yy, 0.0]);
 
-        r_feed * r_parallactic * j_initial
+        j_initial
     }
 }
 
