@@ -292,7 +292,7 @@ impl BeamArgs {
                     .into(),
                 );
 
-                Box::new(crate::beam::SkaArrayFactorFactor::new(params))
+                Box::new(crate::beam::SkaArrayFactorBeam::new(params))
             }
         };
 
