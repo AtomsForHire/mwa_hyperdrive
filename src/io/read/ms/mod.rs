@@ -930,13 +930,7 @@ impl MsReader {
         let num_rows = phased_array_table.n_rows();
         let mut feed_coordinates: Vec<ndarray::Array2<f64>> = vec![];
         phased_array_table.for_each_row(|row| {
-            let res = row.get_cell("ELEMENT_OFFSET").map_err(|err| {
-                format!(
-                    "Error! Failed to get feed element offsets from PHASED_ARRAY/ELEMENT_OFFSET table: {} ",
-                    err
-                )
-            })?;
-
+            let res = row.get_cell("ELEMENT_OFFSET")?;
             feed_coordinates.push(res);
             Ok(())
         })?;
