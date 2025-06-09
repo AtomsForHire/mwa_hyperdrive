@@ -94,7 +94,7 @@ impl SkaArrayFactorBeam {
             let tot_phase = (x_loc / lambda * (beam_l) + y_loc / lambda * (beam_m));
             let angle = -2.0 * PI * tot_phase;
             station_beam_x_theta += Complex::from_polar(1.0, -angle);
-            station_beam_x_theta += Complex::from_polar(1.0, -angle);
+            station_beam_y_theta += Complex::from_polar(1.0, -angle);
         }
 
         // Get beam response
