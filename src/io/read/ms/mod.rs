@@ -941,7 +941,7 @@ impl MsReader {
             //         );
             //     }
             // }
-            let res: Array2<f64> = phased_array_table.get_cell("ELEMENT_OFFSET", row_idx)?;
+            let res = row.get_cell("ELEMENT_OFFSET")?;
             println!("ELEMENT_OFFSET IS {:?}", res);
             Ok(())
         });
