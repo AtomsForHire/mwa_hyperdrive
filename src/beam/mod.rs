@@ -64,11 +64,14 @@ pub enum BeamType {
 
     #[strum(serialize = "ska_airy")]
     SkaAiry,
+
+    #[strum(serialize = "ska_array_factor")]
+    SkaArrayFactor,
 }
 
 impl Default for BeamType {
     fn default() -> Self {
-        Self::SkaAiry
+        Self::SkaArrayFactor
     }
 }
 
@@ -484,6 +487,21 @@ pub fn create_beam_object(
                 feed_coordinates: None,
             };
             Ok(Box::new(SkaAiryBeam::new(default_ska_params)))
+        }
+        BeamType::SkaArrayFactor => {
+            debug!(
+                "Setting up a SkaArrayFactor object via create_beam_object using default SKA params"
+            );
+            let default_ska_params = SkaBeamParams {
+                phase_centre: DEFAULT_SKA_PHASE_CENTRE,
+                ska_site_latitude_rad: DEFAULT_SKA_SITE_LATITUDE_RAD,
+                reference_frequency_hz: DEFAULT_SKA_REF_FREQ_HZ,
+                number_of_stations: num_tiles, // Use num_tiles argument for number_of_stations
+                station_angle_rad: None,
+                feed_angle_rad: None,
+                feed_coordinates: None,
+            };
+            Ok(Box::new(SkaArrayFactor::new(default_ska_params)))
         }
     }
 }
