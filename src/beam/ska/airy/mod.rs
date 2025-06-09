@@ -75,6 +75,8 @@ impl SkaAiryBeam {
 
         // This is the initial Jones matrix. How the X and Y dipoles are
         let j_initial = Jones::from([z, 0.0, 0.0, 0.0, 0.0, 0.0, z, 0.0]);
+
+        j_initial
     }
 }
 

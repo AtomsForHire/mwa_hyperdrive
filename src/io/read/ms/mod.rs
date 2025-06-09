@@ -930,7 +930,7 @@ impl MsReader {
         let num_rows = feed_table.n_rows();
         let mut feed_coordinates: Vec<ndarray::Array2<f64>> = vec![];
         for row_idx in 0..num_rows {
-            match phased_array_table.get_cell("ELEMENT_OFFSET", row) {
+            match phased_array_table.get_cell("ELEMENT_OFFSET", row_idx) {
                 Ok(offsets) => {
                     feed_coordinates.push(offsets);
                 }

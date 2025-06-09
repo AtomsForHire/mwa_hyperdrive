@@ -13,7 +13,6 @@ use log::{error, warn};
 use num_complex::*;
 use vec1::Vec1;
 
-use std::f64::consts::PI;
 const SPEED_OF_LIGHT: f64 = 299792458.0;
 
 #[derive(Clone)]
@@ -24,7 +23,7 @@ pub(crate) struct SkaArrayFactorBeam {
     pub number_of_stations: usize,
     pub station_angle_rad: Vec<f64>,
     pub feed_angle_rad: Vec<f64>,
-    pub feed_coordinates: Vec<f64>,
+    pub feed_coordinates: Vec<Array2<f64>>,
 }
 
 impl SkaArrayFactorBeam {
@@ -99,8 +98,8 @@ impl SkaArrayFactorBeam {
         }
 
         // Get beam response
-        let xx = station_beam_x_theta * station_beam_x_theta.conj();
-        let yy = station_beam_y_theta * station_beam_y_theta.conj();
+        let xx: f64 = (station_beam_x_theta * station_beam_x_theta.conj()).into();
+        let yy: f64 = (station_beam_y_theta * station_beam_y_theta.conj()).into();
 
         // 2. Feed rotation
         // Create rotation matrix from Jones type, since multiplication is defined already
