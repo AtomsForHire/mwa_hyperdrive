@@ -9,7 +9,7 @@ use super::SkaBeamParams;
 use crate::beam::{Beam, BeamError, BeamType};
 #[cfg(any(feature = "cuda", feature = "hip"))]
 use crate::beam::{BeamGpu, DevicePointer, GpuFloat};
-use log::{error, warn};
+use log::{debug, error, warn};
 use num_complex::*;
 use vec1::Vec1;
 
@@ -121,7 +121,7 @@ impl SkaArrayFactorBeam {
         // let j_initial = Jones::from([xx, 0.0, 0.0, 0.0, 0.0, 0.0, yy, 0.0]);
         let j_initial = Jones::from([xx, Complex::new(0.0, 0.0), Complex::new(0.0, 0.0), yy]);
 
-        println!("{:?}", j_initial);
+        debug!("{:?}", j_initial);
         j_initial
     }
 }
