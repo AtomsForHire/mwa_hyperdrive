@@ -75,6 +75,9 @@ impl SkaArrayFactorBeam {
         // transformation matrix, so we can just multiply the coordinates by the saved matrix.
         let coordinates: &Array2<f64> = &self.feed_coordinates[index];
         let ecef_to_local_mat: &Array2<f64> = &self.ecef_to_local_mats[index];
+
+        // Transform the coordinates
+        let transformed_coordinates = coordinates.dot(ecef_to_local_mat);
         let num_elems = coordinates.nrows();
 
         // Convert frequency to wavelength
@@ -99,7 +102,6 @@ impl SkaArrayFactorBeam {
         // let mut station_beam_x_phi = Complex::from(0.0);
         // let mut station_beam_y_phi = Complex::from(0.0);
         for i in 0..num_elems {
-            let transformed_coordinates = coordinates.dot(ecef_to_local_mat);
             let x_loc = transformed_coordinates[[i, 0]];
             let y_loc = transformed_coordinates[[i, 1]];
 
