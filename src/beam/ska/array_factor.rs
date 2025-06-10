@@ -100,8 +100,8 @@ impl SkaArrayFactorBeam {
         // Get beam response
         let xx = station_beam_x_theta * station_beam_x_theta.conj();
         let yy = station_beam_y_theta * station_beam_y_theta.conj();
-        let xy = station_beam_x_theta * station_beam_y_theta.conj();
-        let yx = station_beam_y_theta * station_beam_x_theta.conj();
+        // let xy = station_beam_x_theta * station_beam_y_theta.conj();
+        // let yx = station_beam_y_theta * station_beam_x_theta.conj();
 
         // TODO: Normalisation or something?
 
@@ -122,8 +122,8 @@ impl SkaArrayFactorBeam {
         // Since sky model is unpolarised, no need to take this into account.
 
         // This is the initial Jones matrix. How the X and Y dipoles are
-        // let j_initial = Jones::from([xx, Complex::new(0.0, 0.0), Complex::new(0.0, 0.0), yy]);
-        let j_initial = Jones::from([xx, xy, yx, yy]);
+        let j_initial = Jones::from([xx, Complex::new(0.0, 0.0), Complex::new(0.0, 0.0), yy]);
+        // let j_initial = Jones::from([xx, xy, yx, yy]);
 
         debug!("{:?}", j_initial);
         j_initial
