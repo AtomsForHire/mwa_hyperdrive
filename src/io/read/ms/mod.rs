@@ -940,7 +940,7 @@ impl MsReader {
             println!("{:?}", transform_mat);
 
             feed_coordinates.push(offsets.t().to_owned());
-            ecef_to_local_mats.push(transform_mat);
+            ecef_to_local_mats.push(transform_mat.t().to_owned());
             Ok(())
         })?;
 
