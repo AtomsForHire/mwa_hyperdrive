@@ -925,14 +925,19 @@ impl MsReader {
             }
         }
 
-        // Read in feed element offsets for each antenna/station
+        // Read in feed element offsets for each antenna/station (these are in ECEF coordinates)
+        // and also read in ECEF to local transformation matrix (OSKAR by default already saves the
+        // transpose, so all we have to do is multiply by it to get back to local coordinates)
         let mut phased_array_table = read_table(&ms, Some("PHASED_ARRAY"))?;
         let num_rows = phased_array_table.n_rows();
         let mut feed_coordinates: Vec<ndarray::Array2<f64>> = vec![];
+        let mut ecef_to_local_mats: Vec<ndarray::Array2<f64>> = vec![];
         phased_array_table.for_each_row(|row| {
-            let res = row.get_cell("ELEMENT_OFFSET")?;
+            let offsets = row.get_cell("ELEMENT_OFFSET")?;
+            let transform_mat = row.get_cell("COORDINATE_AXES")?;
 
-            feed_coordinates.push(res);
+            feed_coordinates.push(offsets);
+            ecef_to_local_mats.push(transform_mat);
             Ok(())
         })?;
 
@@ -964,6 +969,7 @@ impl MsReader {
             polarisations: pols,
             feed_angles: Some(feed_angle_vec),
             feed_coordindates: Some(feed_coordinates),
+            ecef_to_local_mats: Some(ecef_to_local_mats),
         };
 
         let ms = MsReader {

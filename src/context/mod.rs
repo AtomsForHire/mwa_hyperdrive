@@ -217,6 +217,9 @@ pub(crate) struct ObsContext {
 
     /// Feed element offsets relative to centre of station
     pub(crate) feed_coordindates: Option<Vec<Array2<f64>>>,
+
+    /// Transformation matrix to convert ECEF to local coordinates for feed_coordindates
+    pub(crate) ecef_to_local_mats: Option<Vec<Array2<f64>>>,
 }
 
 impl ObsContext {

@@ -36,4 +36,5 @@ pub struct SkaBeamParams {
     pub station_angle_rad: Option<Vec<f64>>,
     pub feed_angle_rad: Option<Vec<f64>>,
     pub feed_coordinates: Option<Vec<ndarray::Array2<f64>>>,
+    pub ecef_to_local_mats: Option<Vec<ndarray::Array2<f64>>>,
 }

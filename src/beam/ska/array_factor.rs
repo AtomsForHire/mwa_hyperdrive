@@ -27,6 +27,7 @@ pub(crate) struct SkaArrayFactorBeam {
     pub station_angle_rad: Vec<f64>,
     pub feed_angle_rad: Vec<f64>,
     pub feed_coordinates: Vec<Array2<f64>>,
+    pub ecef_to_local_mats: Vec<Array2<f64>>,
 }
 
 impl SkaArrayFactorBeam {
@@ -45,6 +46,9 @@ impl SkaArrayFactorBeam {
             feed_coordinates: params
                 .feed_coordinates
                 .expect("Error! I need feed coordinates for array factor beam"),
+            feed_coordinates: params.ecef_to_local_mats.expect(
+                "Error! I need ecef to local transformation matrices for array factor beam",
+            ),
         }
     }
 
@@ -65,8 +69,12 @@ impl SkaArrayFactorBeam {
         // These are euler angles
         let feed_angle = self.feed_angle_rad[index];
 
-        // get element coordinates
+        // get element coordinates and transformation matrix for station 'index'
+        // NOTE: OSKAR saves element offsets in ECEF coordinates, we need to transform back to
+        // local enu coordinates. Fortunately, OSKAR saves the *transpose* of the local to ecef
+        // transformation matrix, so we can just multiply the coordinates by the saved matrix.
         let coordinates: &Array2<f64> = &self.feed_coordinates[index];
+        let ecef_to_local_mat: &Array2<f64> = &self.ecef_to_local_mats[index];
         let num_elems = coordinates.nrows();
 
         // Convert frequency to wavelength
@@ -91,8 +99,10 @@ impl SkaArrayFactorBeam {
         // let mut station_beam_x_phi = Complex::from(0.0);
         // let mut station_beam_y_phi = Complex::from(0.0);
         for i in 0..num_elems {
-            let x_loc = coordinates[[i, 0]];
-            let y_loc = coordinates[[i, 1]];
+            let transformed_coordinates = coordinates.dot(&ecef_to_local_mat);
+            let x_loc = transformed_coordinates[[i, 0]];
+            let y_loc = transformed_coordinates[[i, 1]];
+
             // Add up phases
             let tot_phase = (x_loc / lambda * (beam_l) + y_loc / lambda * (beam_m));
             let angle = -2.0 * PI * tot_phase;
@@ -106,7 +116,7 @@ impl SkaArrayFactorBeam {
         // let xy = station_beam_x_theta * station_beam_y_theta.conj();
         // let yx = station_beam_y_theta * station_beam_x_theta.conj();
 
-        // TODO: Normalisation or something?
+        // Normalise complex Array Factor
         let xx = station_beam_x_theta / num_elems as f64;
         let yy = station_beam_y_theta / num_elems as f64;
 
