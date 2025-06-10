@@ -143,7 +143,7 @@ impl SkaArrayFactorBeam {
         // let j_initial = Jones::from([xx, xy, yx, yy]);
 
         debug!("{:?}", j_initial);
-        j_initial
+        r_feed * j_initial
     }
 }
 
