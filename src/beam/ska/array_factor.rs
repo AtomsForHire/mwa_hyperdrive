@@ -1,4 +1,7 @@
-use std::f64::consts::{FRAC_PI_2, PI};
+use std::{
+    f64::consts::{FRAC_PI_2, PI},
+    num,
+};
 
 use marlu::{AzEl, Jones, RADec, LMN};
 use mwa_hyperbeam::fee;
@@ -97,13 +100,15 @@ impl SkaArrayFactorBeam {
             station_beam_y_theta += Complex::from_polar(1.0, -angle);
         }
 
-        // Get beam response
-        let xx = station_beam_x_theta * station_beam_x_theta.conj();
-        let yy = station_beam_y_theta * station_beam_y_theta.conj();
+        // Get power pattern
+        // let xx = station_beam_x_theta * station_beam_x_theta.conj();
+        // let yy = station_beam_y_theta * station_beam_y_theta.conj();
         // let xy = station_beam_x_theta * station_beam_y_theta.conj();
         // let yx = station_beam_y_theta * station_beam_x_theta.conj();
 
         // TODO: Normalisation or something?
+        let xx = station_beam_x_theta / num_elems as f64;
+        let yy = station_beam_y_theta / num_elems as f64;
 
         // 2. Feed rotation
         // Create rotation matrix from Jones type, since multiplication is defined already
