@@ -933,7 +933,9 @@ impl MsReader {
         let mut feed_coordinates: Vec<ndarray::Array2<f64>> = vec![];
         let mut ecef_to_local_mats: Vec<ndarray::Array2<f64>> = vec![];
         phased_array_table.for_each_row(|row| {
-            let offsets = row.get_cell("ELEMENT_OFFSET")?;
+            let offsets: Array2<f64> = row.get_cell("ELEMENT_OFFSET")?;
+            println!("{:?}", offsets.slice(s![0, ..]));
+            println!("{:?}", offsets.t.slice(s![0, ..]));
             let transform_mat = row.get_cell("COORDINATE_AXES")?;
 
             feed_coordinates.push(offsets);
