@@ -284,6 +284,7 @@ impl DiCalArgs {
             feed_angle_rad: obs_context.feed_angles.clone(), // NOTE: Doing this for my own use case!!
             station_angle_rad: obs_context.feed_angles.clone(),
             feed_coordinates: obs_context.feed_coordindates.clone(),
+            ecef_to_local_mats: obs_context.ecef_to_local_mats.clone(),
         };
 
         println!("{:?}", ska_beam_params);

@@ -470,6 +470,7 @@ pub fn create_beam_object(
                 station_angle_rad: None,
                 feed_angle_rad: None,
                 feed_coordinates: None,
+                ecef_to_local_mats: None,
             };
             Ok(Box::new(SkaGaussianBeam::new(default_ska_params)))
         }
@@ -485,6 +486,7 @@ pub fn create_beam_object(
                 station_angle_rad: None,
                 feed_angle_rad: None,
                 feed_coordinates: None,
+                ecef_to_local_mats: None,
             };
             Ok(Box::new(SkaAiryBeam::new(default_ska_params)))
         }
@@ -500,6 +502,7 @@ pub fn create_beam_object(
                 station_angle_rad: None,
                 feed_angle_rad: None,
                 feed_coordinates: None,
+                ecef_to_local_mats: None,
             };
             Ok(Box::new(SkaArrayFactorBeam::new(default_ska_params)))
         }
