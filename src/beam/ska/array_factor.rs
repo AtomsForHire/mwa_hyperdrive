@@ -46,7 +46,7 @@ impl SkaArrayFactorBeam {
             feed_coordinates: params
                 .feed_coordinates
                 .expect("Error! I need feed coordinates for array factor beam"),
-            feed_coordinates: params.ecef_to_local_mats.expect(
+            ecef_to_local_mats: params.ecef_to_local_mats.expect(
                 "Error! I need ecef to local transformation matrices for array factor beam",
             ),
         }
@@ -99,7 +99,7 @@ impl SkaArrayFactorBeam {
         // let mut station_beam_x_phi = Complex::from(0.0);
         // let mut station_beam_y_phi = Complex::from(0.0);
         for i in 0..num_elems {
-            let transformed_coordinates = coordinates.dot(&ecef_to_local_mat);
+            let transformed_coordinates = coordinates.dot(ecef_to_local_mat);
             let x_loc = transformed_coordinates[[i, 0]];
             let y_loc = transformed_coordinates[[i, 1]];
 

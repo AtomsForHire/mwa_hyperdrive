@@ -677,6 +677,7 @@ impl UvfitsReader {
             polarisations: metadata.pols,
             feed_angles: None,
             feed_coordindates: None,
+            ecef_to_local_mats: None,
         };
 
         Ok(UvfitsReader {

@@ -489,6 +489,7 @@ impl RawDataReader {
             polarisations: crate::context::Polarisations::XX_XY_YX_YY,
             feed_angles: None,
             feed_coordindates: None,
+            ecef_to_local_mats: None,
         };
 
         let all_baseline_tile_pairs = metafits_context
