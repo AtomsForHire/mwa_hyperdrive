@@ -96,11 +96,18 @@ impl SkaArrayFactorBeam {
         // The station rotation information, when using the array factor method, is already
         // implicitly included in the coordinates of the elements. We do not need to apply extra
         // rotation for it.
+        // Notation is a bit confusing:
+        // 1. We form the array factor with (l, m) coordinates not (theta, phi)
+        // 2. station_beam_x_theta is the voltage pattern for the array of x-dipoles
+        //    It describes the array's whole x-dipole response to a signal coming from (l, m)
+        //    NOTE: But how does it know to describe the response to (x, y) or (theta, phi)
+        //    components of the electric field?
         let mut station_beam_x_theta = Complex::from(0.0);
         let mut station_beam_y_theta = Complex::from(0.0);
         // TODO: What to do with the phi components?
         // let mut station_beam_x_phi = Complex::from(0.0);
         // let mut station_beam_y_phi = Complex::from(0.0);
+
         for i in 0..num_elems {
             let x_loc = transformed_coordinates[[i, 0]];
             let y_loc = transformed_coordinates[[i, 1]];
@@ -119,8 +126,8 @@ impl SkaArrayFactorBeam {
         // let yx = station_beam_y_theta * station_beam_x_theta.conj();
 
         // Normalise complex Array Factor
-        let xx = station_beam_x_theta / num_elems as f64;
-        let yy = station_beam_y_theta / num_elems as f64;
+        let x_theta = station_beam_x_theta / num_elems as f64;
+        let y_theta = station_beam_y_theta / num_elems as f64;
 
         // 2. Feed rotation
         // Create rotation matrix from Jones type, since multiplication is defined already
@@ -139,11 +146,12 @@ impl SkaArrayFactorBeam {
         // Since sky model is unpolarised, no need to take this into account.
 
         // This is the initial Jones matrix. How the X and Y dipoles are
-        let j_initial = Jones::from([xx, Complex::new(0.0, 0.0), Complex::new(0.0, 0.0), yy]);
+        let j_initial = Jones::from([x_theta, Complex::new(0.0, 0.0), Complex::new(0.0, 0.0), y_theta]);
         // let j_initial = Jones::from([xx, xy, yx, yy]);
 
         debug!("{:?}", j_initial);
-        r_feed * j_initial
+        // r_feed * j_initial
+        j_initial
     }
 }
 
