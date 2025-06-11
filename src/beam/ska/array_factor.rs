@@ -136,15 +136,6 @@ impl SkaArrayFactorBeam {
         // 2. Parallactic angle
         // Since sky model is unpolarised, no need to take this into account.
 
-        // This is the initial Jones matrix. How the X and Y dipoles are
-        // let j_af = Jones::from([
-        //     af_x_theta,
-        //     Complex::new(0.0, 0.0),
-        //     Complex::new(0.0, 0.0),
-        //     af_y_theta,
-        // ]);
-
-        // af * j_ef
         j_ef
     }
 }
