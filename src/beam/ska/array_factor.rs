@@ -96,17 +96,15 @@ impl SkaArrayFactorBeam {
         // The station rotation information, when using the array factor method, is already
         // implicitly included in the coordinates of the elements. We do not need to apply extra
         // rotation for it.
+        // NOTE: The array factor is a *scalar* complex quantity, multiply this array factor by the
+        // element factor
         // Notation is a bit confusing:
         // 1. We form the array factor with (l, m) coordinates not (theta, phi)
         // 2. station_beam_x_theta is the voltage pattern for the array of x-dipoles
         //    It describes the array's whole x-dipole response to a signal coming from (l, m)
         //    NOTE: But how does it know to describe the response to (x, y) or (theta, phi)
         //    components of the electric field?
-        let mut station_beam_x_theta = Complex::from(0.0);
-        let mut station_beam_y_theta = Complex::from(0.0);
-        // TODO: What to do with the phi components?
-        // let mut station_beam_x_phi = Complex::from(0.0);
-        // let mut station_beam_y_phi = Complex::from(0.0);
+        let mut array_factor = Complex::from(0.0);
 
         for i in 0..num_elems {
             let x_loc = transformed_coordinates[[i, 0]];
@@ -115,43 +113,38 @@ impl SkaArrayFactorBeam {
             // Add up phases
             let tot_phase = (x_loc / lambda * (beam_l) + y_loc / lambda * (beam_m));
             let angle = -2.0 * PI * tot_phase;
-            station_beam_x_theta += Complex::from_polar(1.0, -angle);
-            station_beam_y_theta += Complex::from_polar(1.0, -angle);
+            array_factor += Complex::from_polar(1.0, -angle);
         }
 
-        // Get power pattern
-        // let xx = station_beam_x_theta * station_beam_x_theta.conj();
-        // let yy = station_beam_y_theta * station_beam_y_theta.conj();
-        // let xy = station_beam_x_theta * station_beam_y_theta.conj();
-        // let yx = station_beam_y_theta * station_beam_x_theta.conj();
-
         // Normalise complex Array Factor
-        let x_theta = station_beam_x_theta / num_elems as f64;
-        let y_theta = station_beam_y_theta / num_elems as f64;
+        let af = array_factor / num_elems as f64;
 
-        // 2. Feed rotation
-        // Create rotation matrix from Jones type, since multiplication is defined already
-        let r_feed = Jones::from([
-            feed_angle.cos(),
-            0.0,
-            -feed_angle.sin(),
-            0.0,
-            feed_angle.sin(),
-            0.0,
-            feed_angle.cos(),
-            0.0,
+        // 1.1 Embedded Element Pattern for crossed dipoles
+        // Very much related to SKAO memo written by Randal Wayth
+        let phi = f64::atan2(cent_l, cent_m);
+        let theta = f64::asin((cent_l.powi(2) + cent_m.powi(2)).sqrt());
+
+        // NOTE: May need to double check feed_angle convention here again
+        let ct = theta.cos();
+        let j_ef = Jones::from([
+            -(phi - feed_angle).sin() * ct,
+            (phi - feed_angle).cos() * ct * ct,
+            (phi - feed_angle).cos() * ct,
+            (phi - feed_angle).sin() * ct * ct,
         ]);
 
-        // 3. Parallactic angle
+        // 2. Parallactic angle
         // Since sky model is unpolarised, no need to take this into account.
 
         // This is the initial Jones matrix. How the X and Y dipoles are
-        let j_initial = Jones::from([x_theta, Complex::new(0.0, 0.0), Complex::new(0.0, 0.0), y_theta]);
-        // let j_initial = Jones::from([xx, xy, yx, yy]);
+        // let j_af = Jones::from([
+        //     af_x_theta,
+        //     Complex::new(0.0, 0.0),
+        //     Complex::new(0.0, 0.0),
+        //     af_y_theta,
+        // ]);
 
-        debug!("{:?}", j_initial);
-        // r_feed * j_initial
-        j_initial
+        af * j_ef
     }
 }
 
