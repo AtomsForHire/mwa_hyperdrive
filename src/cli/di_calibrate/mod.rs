@@ -287,7 +287,7 @@ impl DiCalArgs {
             ecef_to_local_mats: obs_context.ecef_to_local_mats.clone(),
         };
 
-        println!("{:?}", ska_beam_params);
+        // println!("{:?}", ska_beam_params);
 
         let beam = beam_args.parse(
             total_num_tiles,

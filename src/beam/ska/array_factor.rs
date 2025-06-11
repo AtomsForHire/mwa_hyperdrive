@@ -121,8 +121,8 @@ impl SkaArrayFactorBeam {
 
         // 1.1 Embedded Element Pattern for crossed dipoles
         // Very much related to SKAO memo written by Randal Wayth
-        let phi = f64::atan2(cent_l, cent_m);
-        let theta = f64::asin((cent_l.powi(2) + cent_m.powi(2)).sqrt());
+        let phi = FRAC_PI_2 - azel.az;
+        let theta = FRAC_PI_2 - azel.el;
 
         // NOTE: May need to double check feed_angle convention here again
         let ct = theta.cos();
