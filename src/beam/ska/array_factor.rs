@@ -124,22 +124,23 @@ impl SkaArrayFactorBeam {
         let phi = FRAC_PI_2 - azel.az;
         let theta = FRAC_PI_2 - azel.el;
 
-        // NOTE: May need to double check feed_angle convention here again
+        // Feed angle is a standard counter clokcwise rotation
+        // This expression requires a clockwise rotation
         let ct = theta.cos();
+        let clockwise_rot = PI - feed_angle;
         let j_ef = Jones::from([
-            -af * (phi - feed_angle).sin() * ct,
-            af * (phi - feed_angle).cos() * ct * ct,
-            af * (phi - feed_angle).cos() * ct,
-            af * (phi - feed_angle).sin() * ct * ct,
+            -af * (phi - clockwise_rot).sin() * ct,
+            af * (phi - clockwise_rot).cos() * ct * ct,
+            af * (phi - clockwise_rot).cos() * ct,
+            af * (phi - clockwise_rot).sin() * ct * ct,
         ]);
 
         // 2. Parallactic angle
         let phi = self.ska_site_latitude_rad;
         let ha = hadec.ha;
         let dec = hadec.dec;
-        let psi = f64::atan(
-            (phi.cos() * ha.sin()) / (phi.sin() * dec.cos() - phi.cos() * dec.sin() * ha.cos()),
-        );
+        let psi = (phi.cos() * ha.sin())
+            .atan2((phi.sin() * dec.cos() - phi.cos() * dec.sin() * ha.cos()));
 
         let r_psi = Jones::from([
             psi.cos(),
@@ -152,7 +153,7 @@ impl SkaArrayFactorBeam {
             0.0,
         ]);
 
-        j_ef * r_psi
+        return j_ef * r_psi;
     }
 }
 
