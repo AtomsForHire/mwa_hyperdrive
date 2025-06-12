@@ -134,9 +134,25 @@ impl SkaArrayFactorBeam {
         ]);
 
         // 2. Parallactic angle
-        // Since sky model is unpolarised, no need to take this into account.
+        let phi = self.ska_site_latitude_rad;
+        let ha = hadec.ha;
+        let dec = hadec.dec;
+        let psi = f64::atan(
+            (phi.cos() * ha.sin()) / (phi.sin() * dec.cos() - phi.cos() * dec.sin() * ha.cos()),
+        );
 
-        j_ef
+        let r_psi = Jones::from([
+            psi.cos(),
+            0.0,
+            -psi.sin(),
+            0.0,
+            psi.sin(),
+            0.0,
+            psi.cos(),
+            0.0,
+        ]);
+
+        j_ef * r_psi
     }
 }
 
