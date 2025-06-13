@@ -129,10 +129,10 @@ impl SkaArrayFactorBeam {
         let ct = theta.cos();
         let clockwise_rot = PI - feed_angle;
         let j_ef = Jones::from([
-            -af * (phi - clockwise_rot).sin() * ct,
-            af * (phi - clockwise_rot).cos() * ct * ct,
-            af * (phi - clockwise_rot).cos() * ct,
-            af * (phi - clockwise_rot).sin() * ct * ct,
+            af * (phi + clockwise_rot).cos() * ct * ct,
+            -af * (phi + clockwise_rot).sin() * ct,
+            af * (phi + clockwise_rot).sin() * ct * ct,
+            af * (phi + clockwise_rot).cos() * ct,
         ]);
 
         // 2. Parallactic angle
