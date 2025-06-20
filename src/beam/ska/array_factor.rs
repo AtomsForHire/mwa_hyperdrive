@@ -74,7 +74,16 @@ impl SkaArrayFactorBeam {
         // local enu coordinates. Fortunately, OSKAR saves the *transpose* of the local to ecef
         // transformation matrix, so we can just multiply the coordinates by the saved matrix.
         let coordinates: &Array2<f64> = &self.feed_coordinates[index];
+        println!(
+            "Feed coordinates for station {}:\n{:?}",
+            index,
+            coordinates.slice(s![0..2, ..])
+        );
         let ecef_to_local_mat: &Array2<f64> = &self.ecef_to_local_mats[index];
+        println!(
+            "Transformation matrix for station {}:\n{:?}",
+            index, ecef_to_local_mat
+        );
 
         // Transform the coordinates
         let transformed_coordinates = coordinates.dot(ecef_to_local_mat);
@@ -128,11 +137,17 @@ impl SkaArrayFactorBeam {
         // This expression requires a clockwise rotation
         let ct = theta.cos();
         let clockwise_rot = PI - feed_angle;
+        // let j_ef = Jones::from([
+        //     af * (phi + clockwise_rot).cos() * ct * ct,
+        //     -af * (phi + clockwise_rot).sin() * ct,
+        //     af * (phi + clockwise_rot).sin() * ct * ct,
+        //     af * (phi + clockwise_rot).cos() * ct,
+        // ]);
         let j_ef = Jones::from([
-            af * (phi + clockwise_rot).cos() * ct * ct,
-            -af * (phi + clockwise_rot).sin() * ct,
-            af * (phi + clockwise_rot).sin() * ct * ct,
             af * (phi + clockwise_rot).cos() * ct,
+            -af * (phi + clockwise_rot).sin(),
+            af * (phi + clockwise_rot).sin() * ct,
+            af * (phi + clockwise_rot).cos(),
         ]);
 
         // 2. Parallactic angle
