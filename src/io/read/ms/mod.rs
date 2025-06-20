@@ -932,18 +932,14 @@ impl MsReader {
         let num_rows = phased_array_table.n_rows();
         let mut feed_coordinates: Vec<ndarray::Array2<f64>> = vec![];
         let mut ecef_to_local_mats: Vec<ndarray::Array2<f64>> = vec![];
-        let idx = 0;
         phased_array_table.for_each_row(|row| {
             let offsets: Array2<f64> = row.get_cell("ELEMENT_OFFSET")?;
             // println!("{:?}", offsets.slice(s![0, ..]));
             // println!("{:?}", offsets.t().slice(s![0, ..]));
-            println!("Element offset {}:\n {:?}", idx, offsets);
             let transform_mat: Array2<f64> = row.get_cell("COORDINATE_AXES")?;
-            println!("Transformation mat for {}:\n {:?}", idx, transform_mat);
-            idx += 1;
 
             feed_coordinates.push(offsets.t().to_owned());
-            ecef_to_local_mats.push(transform_mat.t().to_owned());
+            ecef_to_local_mats.push(transform_mat.to_owned());
             Ok(())
         })?;
 
