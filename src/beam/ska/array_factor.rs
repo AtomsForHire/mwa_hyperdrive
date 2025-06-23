@@ -134,30 +134,32 @@ impl SkaArrayFactorBeam {
         //     af * (phi + clockwise_rot).sin() * ct * ct,
         //     af * (phi + clockwise_rot).cos() * ct,
         // ]);
-        let j_ef = Jones::from([
-            af * (phi + clockwise_rot).cos() * ct,
-            -af * (phi + clockwise_rot).sin(),
-            af * (phi + clockwise_rot).sin() * ct,
-            af * (phi + clockwise_rot).cos(),
-        ]);
+        // let j_ef = Jones::from([
+        //     af * (phi + clockwise_rot).cos() * ct,
+        //     -af * (phi + clockwise_rot).sin(),
+        //     af * (phi + clockwise_rot).sin() * ct,
+        //     af * (phi + clockwise_rot).cos(),
+        // ]);
+        let j_ef = Jones::from([af, af, af, af]);
 
         // 2. Parallactic angle
-        let phi = self.ska_site_latitude_rad;
-        let ha = hadec.ha;
-        let dec = hadec.dec;
-        let psi = (phi.cos() * ha.sin())
-            .atan2((phi.sin() * dec.cos() - phi.cos() * dec.sin() * ha.cos()));
-
-        let r_psi = Jones::from([
-            psi.cos(),
-            0.0,
-            -psi.sin(),
-            0.0,
-            psi.sin(),
-            0.0,
-            psi.cos(),
-            0.0,
-        ]);
+        // let phi = self.ska_site_latitude_rad;
+        // let ha = hadec.ha;
+        // let dec = hadec.dec;
+        // let psi = (phi.cos() * ha.sin())
+        //     .atan2((phi.sin() * dec.cos() - phi.cos() * dec.sin() * ha.cos()));
+        //
+        // let r_psi = Jones::from([
+        //     psi.cos(),
+        //     0.0,
+        //     -psi.sin(),
+        //     0.0,
+        //     psi.sin(),
+        //     0.0,
+        //     psi.cos(),
+        //     0.0,
+        // ]);
+        let r_psi = 1.0;
 
         return j_ef * r_psi;
     }
