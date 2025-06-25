@@ -134,13 +134,13 @@ impl SkaArrayFactorBeam {
         //     af * (phi + clockwise_rot).sin() * ct * ct,
         //     af * (phi + clockwise_rot).cos() * ct,
         // ]);
-        // let j_ef = Jones::from([
-        //     af * (phi + clockwise_rot).cos() * ct,
-        //     -af * (phi + clockwise_rot).sin(),
-        //     af * (phi + clockwise_rot).sin() * ct,
-        //     af * (phi + clockwise_rot).cos(),
-        // ]);
-        let j_ef = Jones::from([af, af, af, af]);
+        let j_ef = Jones::from([
+            af * (phi + clockwise_rot).cos() * ct,
+            -af * (phi + clockwise_rot).sin(),
+            af * (phi + clockwise_rot).sin() * ct,
+            af * (phi + clockwise_rot).cos(),
+        ]);
+        // let j_ef = Jones::from([af, af, af, af]);
 
         // 2. Parallactic angle
         // let phi = self.ska_site_latitude_rad;
