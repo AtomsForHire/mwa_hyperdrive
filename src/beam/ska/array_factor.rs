@@ -63,7 +63,7 @@ impl SkaArrayFactorBeam {
         // program run all the way through
 
         // Feed angles, euler angles, azimutal angles from x to y, N of E. Two elements [x, y]
-        let phi_pq: Vec<f64> = &self.feed_angles_rad[index];
+        let phi_pq: &Vec<f64> = &self.feed_angles_rad[index];
 
         // get element coordinates and transformation matrix for station 'index'
         // NOTE: OSKAR saves element offsets in ECEF coordinates, we need to transform back to
