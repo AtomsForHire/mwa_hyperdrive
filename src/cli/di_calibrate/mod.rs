@@ -282,7 +282,6 @@ impl DiCalArgs {
             reference_frequency_hz: freq_centroid,
             number_of_stations: total_num_tiles,
             feed_angles_rad: obs_context.feed_angles.clone(), // NOTE: Doing this for my own use case!!
-            station_angle_rad: obs_context.feed_angles.clone(),
             feed_coordinates: obs_context.feed_coordindates.clone(),
             ecef_to_local_mats: obs_context.ecef_to_local_mats.clone(),
         };

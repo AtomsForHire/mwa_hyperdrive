@@ -33,7 +33,6 @@ pub struct SkaBeamParams {
     pub ska_site_latitude_rad: f64,
     pub reference_frequency_hz: f64,
     pub number_of_stations: usize,
-    pub station_angle_rad: Option<Vec<f64>>,
     pub feed_angles_rad: Option<Vec<Vec<f64>>>,
     pub feed_coordinates: Option<Vec<ndarray::Array2<f64>>>,
     pub ecef_to_local_mats: Option<Vec<ndarray::Array2<f64>>>,
