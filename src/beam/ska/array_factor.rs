@@ -24,7 +24,6 @@ pub(crate) struct SkaArrayFactorBeam {
     pub ska_site_latitude_rad: f64,
     pub reference_frequency_hz: f64,
     pub number_of_stations: usize,
-    pub station_angle_rad: Vec<f64>,
     pub feed_angles_rad: Vec<Vec<f64>>,
     pub feed_coordinates: Vec<Array2<f64>>,
     pub ecef_to_local_mats: Vec<Array2<f64>>,
@@ -37,9 +36,6 @@ impl SkaArrayFactorBeam {
             ska_site_latitude_rad: params.ska_site_latitude_rad,
             reference_frequency_hz: params.reference_frequency_hz,
             number_of_stations: params.number_of_stations,
-            station_angle_rad: params
-                .station_angle_rad
-                .expect("Error! I need a station angles for array factor beam"),
             feed_angles_rad: params
                 .feed_angles_rad
                 .expect("Error! I need feed angles for array factor beam"),
@@ -158,8 +154,7 @@ impl SkaArrayFactorBeam {
         let e_q_theta = (-(phi + PI / 2.0).cos() * theta.cos() * numer_q) / denom_q * array_factor;
         let e_q_phi = ((phi + PI / 2.0).sin() * numer_q) / denom_q * array_factor;
 
-        let j_effective = Jones::from([e_p_theta, 0.0, e_p_phi, 0.0, e_q_theta, 0.0, e_q_phi, 0.0]);
-
+        let j_effective = Jones::from([e_p_theta, e_p_phi, e_q_theta, e_q_phi]);
         // 2. Parallactic angle
         // let phi = self.ska_site_latitude_rad;
         // let ha = hadec.ha;
