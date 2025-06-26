@@ -468,7 +468,7 @@ pub fn create_beam_object(
                 reference_frequency_hz: DEFAULT_SKA_REF_FREQ_HZ,
                 number_of_stations: num_tiles, // Use num_tiles argument for number_of_stations
                 station_angle_rad: None,
-                feed_angle_rad: None,
+                feed_angles_rad: None,
                 feed_coordinates: None,
                 ecef_to_local_mats: None,
             };
@@ -484,7 +484,7 @@ pub fn create_beam_object(
                 reference_frequency_hz: DEFAULT_SKA_REF_FREQ_HZ,
                 number_of_stations: num_tiles, // Use num_tiles argument for number_of_stations
                 station_angle_rad: None,
-                feed_angle_rad: None,
+                feed_angles_rad: None,
                 feed_coordinates: None,
                 ecef_to_local_mats: None,
             };
@@ -500,7 +500,7 @@ pub fn create_beam_object(
                 reference_frequency_hz: DEFAULT_SKA_REF_FREQ_HZ,
                 number_of_stations: num_tiles, // Use num_tiles argument for number_of_stations
                 station_angle_rad: None,
-                feed_angle_rad: None,
+                feed_angles_rad: None,
                 feed_coordinates: None,
                 ecef_to_local_mats: None,
             };
