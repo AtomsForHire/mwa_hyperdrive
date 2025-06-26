@@ -148,11 +148,11 @@ impl SkaArrayFactorBeam {
 
         let dipole_length: f64 = 0.5;
         let kl: f64 = (dipole_length * (PI * freq_hz / SPEED_OF_LIGHT));
-        let numer_p = (kl * phi.cos() * theta.sin()).cos() - kl.cos();
+        let numer_p = (kl * phi_p.cos() * theta.sin()).cos() - kl.cos();
         let numer_q = (kl * (phi_q).cos() * theta.sin()).cos() - kl.cos();
 
-        let e_p_theta = (-phi.cos() * theta.cos() * numer_p) / denom_p * array_factor;
-        let e_p_phi = (phi.sin() * numer_p) / denom_p * array_factor;
+        let e_p_theta = (-phi_p.cos() * theta.cos() * numer_p) / denom_p * array_factor;
+        let e_p_phi = (phi_p.sin() * numer_p) / denom_p * array_factor;
         let e_q_theta = (-(phi_q).cos() * theta.cos() * numer_q) / denom_q * array_factor;
         let e_q_phi = ((phi_q).sin() * numer_q) / denom_q * array_factor;
 
