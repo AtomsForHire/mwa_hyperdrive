@@ -912,12 +912,13 @@ impl MsReader {
         let mut feed_table = read_table(&ms, Some("FEED"))?;
         let num_rows = feed_table.n_rows();
         // let feed_angle_vec: Vec<f64> = feed_table.get_col_as_vec("RECEPTOR_ANGLE")?;
-        let mut feed_angle_vec: Vec<f64> = vec![];
+        let mut feed_angle_vec: Vec<Vec<f64>> = vec![];
         for row_idx in 0..num_rows {
             match feed_table.get_cell_as_vec("RECEPTOR_ANGLE", row_idx) {
                 Ok(angles) => {
-                    feed_angle_vec.push(angles[1]); // The Y dipole is the feed angle I set in the
-                                                    // telescope model.
+                    // feed_angle_vec.push(angles[1]); // The Y dipole is the feed angle I set in the
+                    // telescope model.
+                    feed_angle_vec.push(angles);
                 }
                 Err(e) => {
                     eprintln!("Error! Could not get feed angle for row {}\n{}", row_idx, e);

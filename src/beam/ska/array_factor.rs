@@ -66,8 +66,8 @@ impl SkaArrayFactorBeam {
         // let index = tile_index.unwrap_or(0 as usize); // Uncomment this for debugging, lets
         // program run all the way through
 
-        // These are euler angles
-        let feed_angle = self.feed_angle_rad[index];
+        // Feed angles, euler angles, azimutal angles from x to y, N of E. Two elements [x, y]
+        let phi: Vec<f64> = self.feed_angle_rad[index];
 
         // get element coordinates and transformation matrix for station 'index'
         // NOTE: OSKAR saves element offsets in ECEF coordinates, we need to transform back to
@@ -120,20 +120,21 @@ impl SkaArrayFactorBeam {
         let af = array_factor / num_elems as f64;
 
         // 1.1 Embedded Element Pattern for crossed dipoles
-        // Very much related to SKAO memo written by Randal Wayth
+        // This is assuming the dipoles are aligned with the x and y axis. i.e. NO ROTATION!
         let phi = FRAC_PI_2 - azel.az;
         let theta = FRAC_PI_2 - azel.el;
 
+        // Very much related to SKAO memo written by Randal Wayth
         // Feed angle is a standard counter clokcwise rotation
         // This expression requires a clockwise rotation
-        let ct = theta.cos();
-        let clockwise_rot = PI - feed_angle;
-        let j_ef = Jones::from([
-            af * (phi + clockwise_rot).cos() * ct * ct,
-            -af * (phi + clockwise_rot).sin() * ct,
-            af * (phi + clockwise_rot).sin() * ct * ct,
-            af * (phi + clockwise_rot).cos() * ct,
-        ]);
+        // let ct = theta.cos();
+        // let clockwise_rot = PI - feed_angle;
+        // let j_ef = Jones::from([
+        //     af * (phi + clockwise_rot).cos() * ct * ct,
+        //     -af * (phi + clockwise_rot).sin() * ct,
+        //     af * (phi + clockwise_rot).sin() * ct * ct,
+        //     af * (phi + clockwise_rot).cos() * ct,
+        // ]);
         // let j_ef = Jones::from([
         //     af * (phi + clockwise_rot).cos() * ct,
         //     -af * (phi + clockwise_rot).sin(),
@@ -141,6 +142,24 @@ impl SkaArrayFactorBeam {
         //     af * (phi + clockwise_rot).cos(),
         // ]);
         // let j_ef = Jones::from([af, af, af, af]);
+
+        // The phi angle is different for both p and q dipoles because q is rotated 90 degrees
+        // (usually)
+        let denom_p = self.calc_half_wavelength_dipole_denom(theta, phi[0]);
+        let denom_q = self.calc_half_wavelength_dipole_denom(theta, phi[1]);
+
+        let dipole_length: f64 = 0.5;
+        let kl: f64 = (dipole_length * (PI * freq_hz / SPEED_OF_LIGHT));
+        let numer_p = (kl * phi[0].cos() * theta.sin()).cos() - kl.cos();
+        let numer_q = (kl * phi[1].cos() * theta.sin()).cos() - kl.cos();
+
+        let e_p_theta = (-phi[0].cos() * theta.cos() * numer_p) / denom_p;
+        let e_p_phi = (phi[0].sin() * numer_p) / denom_p;
+        let e_q_theta = (-phi[1].cos() * theta.cos() * numer_q) / denom_q;
+        let e_q_phi = (phi[1].sin() * numer_q) / denom_q;
+
+        let j_element = Jones::from([e_p_theta, 0.0, e_p_phi, 0.0, e_q_theta, 0.0, e_q_phi, 0.0]);
+        let j_effective = array_factor * j_element;
 
         // 2. Parallactic angle
         // let phi = self.ska_site_latitude_rad;
@@ -161,7 +180,13 @@ impl SkaArrayFactorBeam {
         // ]);
         let r_psi = 1.0;
 
-        return j_ef * r_psi;
+        return j_effective * r_psi;
+    }
+
+    /// Calculate the denominator that is common to both E_phi and E_theta components, when using a
+    /// half-wavelength dipole (as OSKAR does)
+    fn calc_half_wavelength_dipole_denom(&self, theta: f64, phi: f64) -> f64 {
+        return 1.0 + phi.cos() * phi.cos() * (theta.cos() * theta * cos() - 1.0);
     }
 }
 
