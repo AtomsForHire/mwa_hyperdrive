@@ -25,7 +25,7 @@ pub(crate) struct SkaArrayFactorBeam {
     pub reference_frequency_hz: f64,
     pub number_of_stations: usize,
     pub station_angle_rad: Vec<f64>,
-    pub feed_angle_rad: Vec<f64>,
+    pub feed_angles_rad: Vec<Vec<f64>>,
     pub feed_coordinates: Vec<Array2<f64>>,
     pub ecef_to_local_mats: Vec<Array2<f64>>,
 }
@@ -40,7 +40,7 @@ impl SkaArrayFactorBeam {
             station_angle_rad: params
                 .station_angle_rad
                 .expect("Error! I need a station angles for array factor beam"),
-            feed_angle_rad: params
+            feed_angles_rad: params
                 .feed_angle_rad
                 .expect("Error! I need feed angles for array factor beam"),
             feed_coordinates: params
