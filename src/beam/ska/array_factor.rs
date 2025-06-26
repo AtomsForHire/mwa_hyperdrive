@@ -141,18 +141,20 @@ impl SkaArrayFactorBeam {
 
         // The phi angle is different for both p and q dipoles because q is rotated 90 degrees
         // (usually)
-        let denom_p = self.calc_half_wavelength_dipole_denom(theta, phi);
-        let denom_q = self.calc_half_wavelength_dipole_denom(theta, phi + PI / 2.0);
+        let phi_p = phi;
+        let phi_q = phi + PI / 2.0;
+        let denom_p = self.calc_half_wavelength_dipole_denom(theta, phi_p);
+        let denom_q = self.calc_half_wavelength_dipole_denom(theta, phi_q);
 
         let dipole_length: f64 = 0.5;
         let kl: f64 = (dipole_length * (PI * freq_hz / SPEED_OF_LIGHT));
         let numer_p = (kl * phi.cos() * theta.sin()).cos() - kl.cos();
-        let numer_q = (kl * (phi + PI / 2.0).cos() * theta.sin()).cos() - kl.cos();
+        let numer_q = (kl * (phi_q).cos() * theta.sin()).cos() - kl.cos();
 
         let e_p_theta = (-phi.cos() * theta.cos() * numer_p) / denom_p * array_factor;
         let e_p_phi = (phi.sin() * numer_p) / denom_p * array_factor;
-        let e_q_theta = (-(phi + PI / 2.0).cos() * theta.cos() * numer_q) / denom_q * array_factor;
-        let e_q_phi = ((phi + PI / 2.0).sin() * numer_q) / denom_q * array_factor;
+        let e_q_theta = (-(phi_q).cos() * theta.cos() * numer_q) / denom_q * array_factor;
+        let e_q_phi = ((phi_q).sin() * numer_q) / denom_q * array_factor;
 
         let j_effective = Jones::from([e_p_theta, e_p_phi, e_q_theta, e_q_phi]);
         // 2. Parallactic angle
