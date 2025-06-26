@@ -41,7 +41,7 @@ impl SkaArrayFactorBeam {
                 .station_angle_rad
                 .expect("Error! I need a station angles for array factor beam"),
             feed_angles_rad: params
-                .feed_angle_rad
+                .feed_angles_rad
                 .expect("Error! I need feed angles for array factor beam"),
             feed_coordinates: params
                 .feed_coordinates
@@ -67,7 +67,7 @@ impl SkaArrayFactorBeam {
         // program run all the way through
 
         // Feed angles, euler angles, azimutal angles from x to y, N of E. Two elements [x, y]
-        let phi: Vec<f64> = self.feed_angle_rad[index];
+        let phi: Vec<f64> = self.feed_angles_rad[index];
 
         // get element coordinates and transformation matrix for station 'index'
         // NOTE: OSKAR saves element offsets in ECEF coordinates, we need to transform back to
@@ -153,13 +153,12 @@ impl SkaArrayFactorBeam {
         let numer_p = (kl * phi[0].cos() * theta.sin()).cos() - kl.cos();
         let numer_q = (kl * phi[1].cos() * theta.sin()).cos() - kl.cos();
 
-        let e_p_theta = (-phi[0].cos() * theta.cos() * numer_p) / denom_p;
-        let e_p_phi = (phi[0].sin() * numer_p) / denom_p;
-        let e_q_theta = (-phi[1].cos() * theta.cos() * numer_q) / denom_q;
-        let e_q_phi = (phi[1].sin() * numer_q) / denom_q;
+        let e_p_theta = (-phi[0].cos() * theta.cos() * numer_p) / denom_p * array_factor;
+        let e_p_phi = (phi[0].sin() * numer_p) / denom_p * array_factor;
+        let e_q_theta = (-phi[1].cos() * theta.cos() * numer_q) / denom_q * array_factor;
+        let e_q_phi = (phi[1].sin() * numer_q) / denom_q * array_factor;
 
-        let j_element = Jones::from([e_p_theta, 0.0, e_p_phi, 0.0, e_q_theta, 0.0, e_q_phi, 0.0]);
-        let j_effective = array_factor * j_element;
+        let j_effective = Jones::from([e_p_theta, 0.0, e_p_phi, 0.0, e_q_theta, 0.0, e_q_phi, 0.0]);
 
         // 2. Parallactic angle
         // let phi = self.ska_site_latitude_rad;
@@ -186,7 +185,7 @@ impl SkaArrayFactorBeam {
     /// Calculate the denominator that is common to both E_phi and E_theta components, when using a
     /// half-wavelength dipole (as OSKAR does)
     fn calc_half_wavelength_dipole_denom(&self, theta: f64, phi: f64) -> f64 {
-        return 1.0 + phi.cos() * phi.cos() * (theta.cos() * theta * cos() - 1.0);
+        return 1.0 + phi.cos() * phi.cos() * (theta.cos() * theta.cos() - 1.0);
     }
 }
 
