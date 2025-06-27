@@ -156,7 +156,8 @@ impl SkaArrayFactorBeam {
         let e_q_theta = (-(phi_q).cos() * theta.cos() * numer_q) / denom_q * af_norm;
         let e_q_phi = ((phi_q).sin() * numer_q) / denom_q * af_norm;
 
-        let j_effective = Jones::from([e_p_theta, e_p_phi, e_q_theta, e_q_phi]);
+        // let j_effective = Jones::from([e_p_theta, e_p_phi, e_q_theta, e_q_phi]);
+        let j = Jones::from([-e_q_phi, e_q_theta, -e_p_phi, e_p_theta]);
 
         // 2. Parallactic angle
         let obs_lat = self.ska_site_latitude_rad;
@@ -165,18 +166,28 @@ impl SkaArrayFactorBeam {
         let psi = (obs_lat.cos() * ha.sin())
             .atan2((obs_lat.sin() * dec.cos() - obs_lat.cos() * dec.sin() * ha.cos()));
 
+        // let r_psi = Jones::from([
+        //     psi.cos(),
+        //     0.0,
+        //     -psi.sin(),
+        //     0.0,
+        //     psi.sin(),
+        //     0.0,
+        //     psi.cos(),
+        //     0.0,
+        // ]);
         let r_psi = Jones::from([
+            -psi.sin(),
+            0.0,
+            -psi.cos(),
+            0.0,
             psi.cos(),
             0.0,
             -psi.sin(),
             0.0,
-            psi.sin(),
-            0.0,
-            psi.cos(),
-            0.0,
         ]);
 
-        return j_effective * r_psi;
+        return j * r_psi;
     }
 
     /// Calculate the denominator that is common to both E_phi and E_theta components, when using a
