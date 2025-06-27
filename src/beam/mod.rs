@@ -28,7 +28,7 @@ use itertools::Itertools;
 use log::debug;
 use marlu::{AzEl, Jones, RADec};
 use ndarray::prelude::*;
-use std::f64::consts;
+use std::f64::consts::PI;
 use strum::IntoEnumIterator;
 
 // Default variables for create_beam_object ska beams
@@ -494,14 +494,14 @@ pub fn create_beam_object(
                 "Setting up a SkaArrayFactor object via create_beam_object using default SKA params"
             );
             // Populate some default values so I can plot the beam response
-            let feed_angles_rad: Vec<Vec<f64>> = vec![];
+            let mut feed_angles_rad: Vec<Vec<f64>> = vec![];
             for i in 0..256 {
                 feed_angles_rad.push(vec![0.0, PI / 2.0]);
             }
 
             let feed_coordinates: Vec<Array2<f64>> = vec![get_s8_1()];
             let ecef_to_local_mats: Vec<Array2<f64>> =
-                vec![array![[1, 0, 0], [0, 1, 0], [0, 0, 1],]];
+                vec![array![[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0],]];
 
             let default_ska_params = SkaBeamParams {
                 phase_centre: DEFAULT_SKA_PHASE_CENTRE,
