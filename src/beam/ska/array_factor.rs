@@ -113,7 +113,7 @@ impl SkaArrayFactorBeam {
         }
 
         // Normalise complex Array Factor
-        let af = array_factor / num_elems as f64;
+        let af_norm = array_factor / num_elems as f64;
 
         // 1.1 Embedded Element Pattern for crossed dipoles
         // This is assuming the dipoles are aligned with the x and y axis. i.e. NO ROTATION!
@@ -146,14 +146,15 @@ impl SkaArrayFactorBeam {
         let denom_p = self.calc_half_wavelength_dipole_denom(theta, phi_p);
         let denom_q = self.calc_half_wavelength_dipole_denom(theta, phi_q);
 
-        let kl: f64 = FRAC_PI_2;
+        let kl: f64 = FRAC_PI_2; // By default OSKAR uses a dipole length of 0.5 wavelengths, so
+                                 // the expression for kL simplifies to pi/2
         let numer_p = (kl * phi_p.cos() * theta.sin()).cos() - kl.cos();
         let numer_q = (kl * (phi_q).cos() * theta.sin()).cos() - kl.cos();
 
-        let e_p_theta = (-phi_p.cos() * theta.cos() * numer_p) / denom_p * array_factor;
-        let e_p_phi = (phi_p.sin() * numer_p) / denom_p * array_factor;
-        let e_q_theta = (-(phi_q).cos() * theta.cos() * numer_q) / denom_q * array_factor;
-        let e_q_phi = ((phi_q).sin() * numer_q) / denom_q * array_factor;
+        let e_p_theta = (-phi_p.cos() * theta.cos() * numer_p) / denom_p * af_norm;
+        let e_p_phi = (phi_p.sin() * numer_p) / denom_p * af_norm;
+        let e_q_theta = (-(phi_q).cos() * theta.cos() * numer_q) / denom_q * af_norm;
+        let e_q_phi = ((phi_q).sin() * numer_q) / denom_q * af_norm;
 
         let j_effective = Jones::from([e_p_theta, e_p_phi, e_q_theta, e_q_phi]);
 
@@ -174,7 +175,6 @@ impl SkaArrayFactorBeam {
             psi.cos(),
             0.0,
         ]);
-        // let r_psi = 1.0;
 
         return j_effective * r_psi;
     }
