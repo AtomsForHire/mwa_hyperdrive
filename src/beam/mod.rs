@@ -492,6 +492,10 @@ pub fn create_beam_object(
             debug!(
                 "Setting up a SkaArrayFactor object via create_beam_object using default SKA params"
             );
+            // Populate some default values so I can plot the beam response
+            let feed_angles_rad: Vec<Vec<f64>> = vec![];
+            let feed_coordinates: Vec<Array2<f64>> = vec![];
+            let ecef_to_local_mats: Vec<Array2<f64>> = vec![];
             let default_ska_params = SkaBeamParams {
                 phase_centre: DEFAULT_SKA_PHASE_CENTRE,
                 ska_site_latitude_rad: DEFAULT_SKA_SITE_LATITUDE_RAD,
