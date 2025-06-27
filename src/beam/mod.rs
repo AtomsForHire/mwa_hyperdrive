@@ -501,7 +501,9 @@ pub fn create_beam_object(
 
             let feed_coordinates: Vec<Array2<f64>> = vec![get_s8_1()];
             let ecef_to_local_mats: Vec<Array2<f64>> =
-                vec![array![[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0],]];
+                vec![array![[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0],]]; // Usually the
+                                                                                  // code transform from ecef to local, but since I'm hardcoding local here I don't need
+                                                                                  // to transform.
 
             let default_ska_params = SkaBeamParams {
                 phase_centre: DEFAULT_SKA_PHASE_CENTRE,
