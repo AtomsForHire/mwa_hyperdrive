@@ -187,7 +187,10 @@ impl SkaArrayFactorBeam {
             0.0,
         ]);
 
-        return j * r_psi;
+        let bpp = j * r_psi;
+        let bppp = Jones::from([bpp[3], bpp[2], bpp[1], bpp[0]]);
+
+        return bppp;
     }
 
     /// Calculate the denominator that is common to both E_phi and E_theta components, when using a
