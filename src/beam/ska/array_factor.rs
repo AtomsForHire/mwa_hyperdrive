@@ -146,8 +146,7 @@ impl SkaArrayFactorBeam {
         let denom_p = self.calc_half_wavelength_dipole_denom(theta, phi_p);
         let denom_q = self.calc_half_wavelength_dipole_denom(theta, phi_q);
 
-        let dipole_length: f64 = 0.5;
-        let kl: f64 = (dipole_length * (PI * freq_hz / SPEED_OF_LIGHT));
+        let kl: f64 = FRAC_PI_2;
         let numer_p = (kl * phi_p.cos() * theta.sin()).cos() - kl.cos();
         let numer_q = (kl * (phi_q).cos() * theta.sin()).cos() - kl.cos();
 
@@ -157,24 +156,25 @@ impl SkaArrayFactorBeam {
         let e_q_phi = ((phi_q).sin() * numer_q) / denom_q * array_factor;
 
         let j_effective = Jones::from([e_p_theta, e_p_phi, e_q_theta, e_q_phi]);
+
         // 2. Parallactic angle
-        // let phi = self.ska_site_latitude_rad;
-        // let ha = hadec.ha;
-        // let dec = hadec.dec;
-        // let psi = (phi.cos() * ha.sin())
-        //     .atan2((phi.sin() * dec.cos() - phi.cos() * dec.sin() * ha.cos()));
-        //
-        // let r_psi = Jones::from([
-        //     psi.cos(),
-        //     0.0,
-        //     -psi.sin(),
-        //     0.0,
-        //     psi.sin(),
-        //     0.0,
-        //     psi.cos(),
-        //     0.0,
-        // ]);
-        let r_psi = 1.0;
+        let obs_lat = self.ska_site_latitude_rad;
+        let ha = hadec.ha;
+        let dec = hadec.dec;
+        let psi = (obs_lat.cos() * ha.sin())
+            .atan2((obs_lat.sin() * dec.cos() - obs_lat.cos() * dec.sin() * ha.cos()));
+
+        let r_psi = Jones::from([
+            psi.cos(),
+            0.0,
+            -psi.sin(),
+            0.0,
+            psi.sin(),
+            0.0,
+            psi.cos(),
+            0.0,
+        ]);
+        // let r_psi = 1.0;
 
         return j_effective * r_psi;
     }
