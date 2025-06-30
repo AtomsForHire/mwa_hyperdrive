@@ -100,7 +100,7 @@ fn gen_azzas<F: Float + FromPrimitive>(
         })
 }
 
-fn calc_cpu(args: &beamargs) -> result<(), hyperdriveerror> {
+fn calc_cpu(args: &BeamArgs) -> Result<(), HyperdriveError> {
     let beamargs {
         beam_type,
         delays,
@@ -114,17 +114,17 @@ fn calc_cpu(args: &beamargs) -> result<(), hyperdriveerror> {
     } = args;
 
     let beam = create_beam_object(
-        some(beam_type.as_str()),
+        Some(beam_type.as_str()),
         1,
         delays::partial(delays.clone().unwrap_or(vec![0; 16])),
     )?;
-    let mut out = bufwriter::new(file::create(output)?);
+    let mut out = BufWriter::new(File::create(output)?);
 
     let azels: vec<_> = gen_azzas(max_za.to_radians(), step.to_radians())
-        .map(|(az, za)| azel::from_radians(az, frac_pi_2 - za))
+        .map(|(az, za)| AzEl::from_radians(az, frac_pi_2 - za))
         .collect();
     let jones =
-        beam.calc_jones_array(&azels, freq_mhz * 1e6, some(0), latitude_deg.to_radians())?; // putting
+        beam.calc_jones_array(&azels, freq_mhz * 1e6, Some(0), latitude_deg.to_radians())?; // putting
                                                                                             // tile_index = some(0) here, not sure if this is supposed to be some generic utility function.
                                                                                             // seems like it
     for (j, azel) in jones.into_iter().zip(azels) {
@@ -137,7 +137,7 @@ fn calc_cpu(args: &beamargs) -> result<(), hyperdriveerror> {
         )?;
     }
 
-    ok(())
+    Ok(())
 }
 
 #[cfg(any(feature = "cuda", feature = "hip"))]
