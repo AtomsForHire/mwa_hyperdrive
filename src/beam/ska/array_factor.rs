@@ -107,7 +107,8 @@ impl SkaArrayFactorBeam {
             let y_loc = transformed_coordinates[[i, 1]];
 
             // Add up phases
-            let tot_phase = (x_loc / lambda * (beam_l) + y_loc / lambda * (beam_m));
+            let tot_phase =
+                (x_loc / lambda * (beam_l - cent_l) + y_loc / lambda * (beam_m - cent_m));
             let angle = -2.0 * PI * tot_phase;
             array_factor += Complex::from_polar(1.0, -angle);
         }
@@ -146,8 +147,8 @@ impl SkaArrayFactorBeam {
         let denom_p = self.calc_half_wavelength_dipole_denom(theta, phi_p);
         let denom_q = self.calc_half_wavelength_dipole_denom(theta, phi_q);
 
-        let kl: f64 = PI; // By default OSKAR uses a dipole length of 0.5 wavelengths, so
-                          // the expression for kL simplifies to pi
+        let kl: f64 = PI / 2.0; // By default OSKAR uses a dipole length of 0.5 wavelengths, so
+                                // the expression for kL simplifies to pi/2.0
         let numer_p = (kl * phi_p.cos() * theta.sin()).cos() - kl.cos();
         let numer_q = (kl * (phi_q).cos() * theta.sin()).cos() - kl.cos();
 
