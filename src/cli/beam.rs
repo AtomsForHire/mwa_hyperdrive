@@ -116,7 +116,7 @@ fn calc_cpu(args: &BeamArgs) -> Result<(), HyperdriveError> {
     let beam = create_beam_object(
         Some(beam_type.as_str()),
         1,
-        delays::partial(Delays.clone().unwrap_or(vec![0; 16])),
+        Delays::partial(delays.clone().unwrap_or(vec![0; 16])),
     )?;
     let mut out = BufWriter::new(File::create(output)?);
 
