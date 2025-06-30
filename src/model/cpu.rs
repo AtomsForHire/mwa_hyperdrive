@@ -105,7 +105,10 @@ impl<'a> SkyModellerCpu<'a> {
         let mut tile_index_to_array_index_map = Vec::with_capacity(total_num_tiles);
 
         let beam_type = beam.get_beam_type();
-        if matches!(beam_type, BeamType::SkaAiry | BeamType::SkaGaussian) {
+        if matches!(
+            beam_type,
+            BeamType::SkaAiry | BeamType::SkaGaussian | BeamType::SkaArrayFactor
+        ) {
             let mut current_unique_idx_counter = 0;
             for i_tile in 0..total_num_tiles {
                 if flagged_tiles.contains(&i_tile) {
@@ -300,7 +303,7 @@ impl<'a> SkyModellerCpu<'a> {
 
         let array_latitude_rad = if matches!(
             self.beam.get_beam_type(),
-            BeamType::SkaAiry | BeamType::SkaGaussian
+            BeamType::SkaAiry | BeamType::SkaGaussian | BeamType::SkaArrayFactor
         ) {
             lst_rad
         } else {
@@ -427,7 +430,7 @@ impl<'a> SkyModellerCpu<'a> {
 
         let array_latitude_rad = if matches!(
             self.beam.get_beam_type(),
-            BeamType::SkaAiry | BeamType::SkaGaussian
+            BeamType::SkaAiry | BeamType::SkaGaussian | BeamType::SkaArrayFactor
         ) {
             lst_rad
         } else {
@@ -597,7 +600,7 @@ impl<'a> SkyModellerCpu<'a> {
 
         let array_latitude_rad = if matches!(
             self.beam.get_beam_type(),
-            BeamType::SkaAiry | BeamType::SkaGaussian
+            BeamType::SkaAiry | BeamType::SkaGaussian | BeamType::SkaArrayFactor
         ) {
             lst_rad
         } else {

@@ -80,7 +80,7 @@ impl SkaArrayFactorBeam {
         let lambda = SPEED_OF_LIGHT / freq_hz;
 
         let hadec = azel.to_hadec(self.ska_site_latitude_rad);
-        let beam_radec = hadec.to_radec(lst_rad);
+        let beam_radec = hadec.to_radec(lst_rad); // BUG: lst or latitude needed here?
         let LMN {
             l: beam_l,
             m: beam_m,
@@ -120,25 +120,6 @@ impl SkaArrayFactorBeam {
         // This is assuming the dipoles are aligned with the x and y axis. i.e. NO ROTATION!
         let phi = FRAC_PI_2 - azel.az;
         let theta = FRAC_PI_2 - azel.el;
-
-        // Very much related to SKAO memo written by Randal Wayth
-        // Feed angle is a standard counter clokcwise rotation
-        // This expression requires a clockwise rotation
-        // let ct = theta.cos();
-        // let clockwise_rot = PI - feed_angle;
-        // let j_ef = Jones::from([
-        //     af * (phi + clockwise_rot).cos() * ct * ct,
-        //     -af * (phi + clockwise_rot).sin() * ct,
-        //     af * (phi + clockwise_rot).sin() * ct * ct,
-        //     af * (phi + clockwise_rot).cos() * ct,
-        // ]);
-        // let j_ef = Jones::from([
-        //     af * (phi + clockwise_rot).cos() * ct,
-        //     -af * (phi + clockwise_rot).sin(),
-        //     af * (phi + clockwise_rot).sin() * ct,
-        //     af * (phi + clockwise_rot).cos(),
-        // ]);
-        // let j_ef = Jones::from([af, af, af, af]);
 
         // The phi angle is different for both p and q dipoles because q is rotated 90 degrees
         // (usually)
