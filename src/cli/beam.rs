@@ -101,7 +101,7 @@ fn gen_azzas<F: Float + FromPrimitive>(
 }
 
 fn calc_cpu(args: &BeamArgs) -> Result<(), HyperdriveError> {
-    let beamargs {
+    let BeamArgs {
         beam_type,
         delays,
         freq_mhz,
@@ -120,8 +120,8 @@ fn calc_cpu(args: &BeamArgs) -> Result<(), HyperdriveError> {
     )?;
     let mut out = BufWriter::new(File::create(output)?);
 
-    let azels: vec<_> = gen_azzas(max_za.to_radians(), step.to_radians())
-        .map(|(az, za)| AzEl::from_radians(az, frac_pi_2 - za))
+    let azels: Vec<_> = gen_azzas(max_za.to_radians(), step.to_radians())
+        .map(|(az, za)| AzEl::from_radians(az, FRAC_PI_2 - za))
         .collect();
     let jones =
         beam.calc_jones_array(&azels, freq_mhz * 1e6, Some(0), latitude_deg.to_radians())?; // putting
