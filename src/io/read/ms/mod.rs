@@ -940,7 +940,7 @@ impl MsReader {
             let transform_mat: Array2<f64> = row.get_cell("COORDINATE_AXES")?;
 
             feed_coordinates.push(offsets.t().to_owned());
-            ecef_to_local_mats.push(transform_mat.to_owned());
+            ecef_to_local_mats.push(transform_mat.t().to_owned());
             Ok(())
         })?;
 
