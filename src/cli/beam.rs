@@ -118,7 +118,10 @@ fn calc_cpu(args: &BeamArgs) -> Result<(), HyperdriveError> {
         1,
         Delays::Partial(delays.clone().unwrap_or(vec![0; 16])),
     )?;
+    // Write out total + separate x, y components
     let mut out = BufWriter::new(File::create(output)?);
+    let mut out_x = BufWriter::new(File::create("beam_responses_x.tsv".into())?);
+    let mut out_y = BufWriter::new(File::create("beam_responses_y.tsv".into())?);
 
     let azels: Vec<_> = gen_azzas(max_za.to_radians(), step.to_radians())
         .map(|(az, za)| AzEl::from_radians(az, FRAC_PI_2 - za))
@@ -135,6 +138,10 @@ fn calc_cpu(args: &BeamArgs) -> Result<(), HyperdriveError> {
             azel.za(),
             j[0].norm() + j[3].norm()
         )?;
+
+        writeln!(&mut out_x, "{}\t{}\t{:e}", azel.az, azel.za(), j[0].norm())?;
+
+        writeln!(&mut out_y, "{}\t{}\t{:e}", azel.az, azel.za(), j[3].norm())?;
     }
 
     Ok(())
