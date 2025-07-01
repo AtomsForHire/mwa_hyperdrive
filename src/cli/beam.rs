@@ -120,8 +120,8 @@ fn calc_cpu(args: &BeamArgs) -> Result<(), HyperdriveError> {
     )?;
     // Write out total + separate x, y components
     let mut out = BufWriter::new(File::create(output)?);
-    let mut out_x = BufWriter::new(File::create("beam_responses_x.tsv".into())?);
-    let mut out_y = BufWriter::new(File::create("beam_responses_y.tsv".into())?);
+    let mut out_x = BufWriter::new(File::create("beam_responses_x.tsv")?);
+    let mut out_y = BufWriter::new(File::create("beam_responses_y.tsv")?);
 
     let azels: Vec<_> = gen_azzas(max_za.to_radians(), step.to_radians())
         .map(|(az, za)| AzEl::from_radians(az, FRAC_PI_2 - za))
