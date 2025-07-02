@@ -38,7 +38,7 @@ pub struct BeamArgs {
 
     /// The array latitude to use. This only affects the parallactic-angle
     /// correction.
-    #[clap(short, long, allow_hyphen_values = true, default_value = "-27.0")]
+    #[clap(short, long, allow_hyphen_values = true, default_value = "0.0")]
     latitude_deg: f64,
 
     /// Get beam responses from zenith down to this zenith angle [degrees]. e.g.
