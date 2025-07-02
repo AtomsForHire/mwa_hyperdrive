@@ -138,38 +138,28 @@ impl SkaArrayFactorBeam {
         let e_q_theta = (-(phi_q).cos() * theta.cos() * numer_q) / denom_q * af_norm;
         let e_q_phi = ((phi_q).sin() * numer_q) / denom_q * af_norm;
 
-        // let j_effective = Jones::from([e_p_theta, e_p_phi, e_q_theta, e_q_phi]);
-        let j = Jones::from([-e_q_phi, e_q_theta, -e_p_phi, e_p_theta]);
+        // Follow steps outlined in Hyperbeam fee_pols.pdf
+        // 1. Construct Jones matrix 'B'
+        let b = Jones::from([e_p_theta, e_p_phi, e_q_theta, e_q_phi]);
 
-        // 2. Parallactic angle
+        // 2. Reorder matrix B into matrix B' (B prime)
+        let bp = Jones::from([-e_q_phi, e_q_theta, -e_p_phi, e_p_theta]);
+
+        // 3. Apply Parallactic angle correction according to the Hyperbeam doc
         let obs_lat = self.ska_site_latitude_rad;
         let ha = hadec.ha;
         let dec = hadec.dec;
         let psi = (obs_lat.cos() * ha.sin())
             .atan2((obs_lat.sin() * dec.cos() - obs_lat.cos() * dec.sin() * ha.cos()));
 
-        // let r_psi = Jones::from([
-        //     psi.cos(),
-        //     0.0,
-        //     -psi.sin(),
-        //     0.0,
-        //     psi.sin(),
-        //     0.0,
-        //     psi.cos(),
-        //     0.0,
-        // ]);
-        let r_psi = Jones::from([
-            -psi.sin(),
-            0.0,
-            -psi.cos(),
-            0.0,
-            psi.cos(),
-            0.0,
-            -psi.sin(),
-            0.0,
-        ]);
+        let bpp_1 = -bp[2] * psi.cos() + bp[3] * psi.sin();
+        let bpp_2 = -bp[2] * psi.sin() - bp[3] * psi.cos();
+        let bpp_3 = -bp[0] * psi.cos() + bp[1] * psi.sin();
+        let bpp_4 = -bp[0] * psi.sin() - bp[1] * psi.cos();
 
-        let bpp = j * r_psi;
+        let bpp = Jones::from([bpp_1, bpp_2, bpp_3, bpp_4]);
+
+        // 4. Reorder into MWA-compliant Jones matrix
         let bppp = Jones::from([bpp[3], bpp[2], bpp[1], bpp[0]]);
 
         return bppp;
