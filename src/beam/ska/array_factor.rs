@@ -122,9 +122,13 @@ impl SkaArrayFactorBeam {
         let theta = FRAC_PI_2 - azel.el;
 
         // The phi angle is different for both p and q dipoles because q is rotated 90 degrees
-        // (usually)
-        let phi_p = phi;
-        let phi_q = phi + PI / 2.0;
+        // (usually). Use IAU convention, when unrotated p is aligned with the NS axis and q with
+        // the EW axis.
+        // let phi_p = phi;
+        // let phi_q = phi + PI / 2.0;
+        let phi_p = phi + PI / 2.0;
+        let phi_q = phi;
+
         let denom_p = self.calc_half_wavelength_dipole_denom(theta, phi_p);
         let denom_q = self.calc_half_wavelength_dipole_denom(theta, phi_q);
 
@@ -138,31 +142,34 @@ impl SkaArrayFactorBeam {
         let e_q_theta = (-(phi_q).cos() * theta.cos() * numer_q) / denom_q * af_norm;
         let e_q_phi = ((phi_q).sin() * numer_q) / denom_q * af_norm;
 
-        // Follow steps outlined in Hyperbeam fee_pols.pdf
+        // // Follow steps outlined in Hyperbeam fee_pols.pdf
+        // // 1. Construct Jones matrix 'B'
+        // let b = Jones::from([e_p_theta, e_p_phi, e_q_theta, e_q_phi]);
+        //
+        // // 2. Reorder matrix B into matrix B' (B prime)
+        // let bp = Jones::from([-e_q_phi, e_q_theta, -e_p_phi, e_p_theta]);
+        //
+        // // 3. Apply Parallactic angle correction according to the Hyperbeam doc
+        // let obs_lat = self.ska_site_latitude_rad;
+        // let ha = hadec.ha;
+        // let dec = hadec.dec;
+        // let psi = (obs_lat.cos() * ha.sin())
+        //     .atan2((obs_lat.sin() * dec.cos() - obs_lat.cos() * dec.sin() * ha.cos()));
+        //
+        // let bpp_1 = -bp[2] * psi.cos() + bp[3] * psi.sin();
+        // let bpp_2 = -bp[2] * psi.sin() - bp[3] * psi.cos();
+        // let bpp_3 = -bp[0] * psi.cos() + bp[1] * psi.sin();
+        // let bpp_4 = -bp[0] * psi.sin() - bp[1] * psi.cos();
+        //
+        // let bpp = Jones::from([bpp_1, bpp_2, bpp_3, bpp_4]);
+        //
+        // // 4. Reorder into MWA-compliant Jones matrix
+        // let bppp = Jones::from([bpp[3], bpp[2], bpp[1], bpp[0]]);
+
+        // Don't assume the e_p_theta etc. calculations follow what Hyperbeam does
         // 1. Construct Jones matrix 'B'
         let b = Jones::from([e_p_theta, e_p_phi, e_q_theta, e_q_phi]);
-
-        // 2. Reorder matrix B into matrix B' (B prime)
-        let bp = Jones::from([-e_q_phi, e_q_theta, -e_p_phi, e_p_theta]);
-
-        // 3. Apply Parallactic angle correction according to the Hyperbeam doc
-        let obs_lat = self.ska_site_latitude_rad;
-        let ha = hadec.ha;
-        let dec = hadec.dec;
-        let psi = (obs_lat.cos() * ha.sin())
-            .atan2((obs_lat.sin() * dec.cos() - obs_lat.cos() * dec.sin() * ha.cos()));
-
-        let bpp_1 = -bp[2] * psi.cos() + bp[3] * psi.sin();
-        let bpp_2 = -bp[2] * psi.sin() - bp[3] * psi.cos();
-        let bpp_3 = -bp[0] * psi.cos() + bp[1] * psi.sin();
-        let bpp_4 = -bp[0] * psi.sin() - bp[1] * psi.cos();
-
-        let bpp = Jones::from([bpp_1, bpp_2, bpp_3, bpp_4]);
-
-        // 4. Reorder into MWA-compliant Jones matrix
-        let bppp = Jones::from([bpp[3], bpp[2], bpp[1], bpp[0]]);
-
-        return bppp;
+        return b;
     }
 
     /// Calculate the denominator that is common to both E_phi and E_theta components, when using a
