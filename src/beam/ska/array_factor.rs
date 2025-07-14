@@ -169,7 +169,26 @@ impl SkaArrayFactorBeam {
         // Don't assume the e_p_theta etc. calculations follow what Hyperbeam does
         // 1. Construct Jones matrix 'B'
         let b = Jones::from([e_p_theta, e_p_phi, e_q_theta, e_q_phi]);
-        return b;
+
+        // 2. Apply parallactic angle rotation (the OSKAR way)
+        let obs_lat = self.ska_site_latitude_rad;
+        let ha = hadec.ha;
+        let dec = hadec.dec;
+        let psi = (obs_lat.cos() * ha.sin())
+            .atan2((obs_lat.sin() * dec.cos() - obs_lat.cos() * dec.sin() * ha.cos()));
+
+        let rot_mat = Jones::from([
+            psi.cos(),
+            0.0,
+            -psi.sin(),
+            0.0,
+            psi.sin(),
+            0.0,
+            psi.cos(),
+            0.0,
+        ]);
+
+        return b * rot_mat;
     }
 
     /// Calculate the denominator that is common to both E_phi and E_theta components, when using a
