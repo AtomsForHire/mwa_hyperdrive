@@ -166,7 +166,16 @@ impl SkaArrayFactorBeam {
         // let bpp_4 = -bp[0] * psi.sin() - bp[1] * psi.cos();
 
         // let bpp = Jones::from([bpp_1, bpp_2, bpp_3, bpp_4]);
-        let rot_mat = Jones::from([-(psi.sin()), 0.0, psi.cos(), 0.0, psi.cos(), 0.0, psi.sin()]);
+        let rot_mat = Jones::from([
+            -(psi.sin()),
+            0.0,
+            psi.cos(),
+            0.0,
+            psi.cos(),
+            0.0,
+            psi.sin(),
+            0.0,
+        ]);
         let bpp = bp * rot_mat;
 
         // 4. Reorder into MWA-compliant Jones matrix
