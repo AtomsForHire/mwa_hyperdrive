@@ -160,12 +160,14 @@ impl SkaArrayFactorBeam {
         let psi = (obs_lat.cos() * ha.sin())
             .atan2((obs_lat.sin() * dec.cos() - obs_lat.cos() * dec.sin() * ha.cos()));
 
-        let bpp_1 = -bp[2] * psi.cos() + bp[3] * psi.sin();
-        let bpp_2 = -bp[2] * psi.sin() - bp[3] * psi.cos();
-        let bpp_3 = -bp[0] * psi.cos() + bp[1] * psi.sin();
-        let bpp_4 = -bp[0] * psi.sin() - bp[1] * psi.cos();
+        // let bpp_1 = -bp[2] * psi.cos() + bp[3] * psi.sin();
+        // let bpp_2 = -bp[2] * psi.sin() - bp[3] * psi.cos();
+        // let bpp_3 = -bp[0] * psi.cos() + bp[1] * psi.sin();
+        // let bpp_4 = -bp[0] * psi.sin() - bp[1] * psi.cos();
 
-        let bpp = Jones::from([bpp_1, bpp_2, bpp_3, bpp_4]);
+        // let bpp = Jones::from([bpp_1, bpp_2, bpp_3, bpp_4]);
+        let rot_mat = Jones::from([-(psi.sin()), 0.0, psi.cos(), 0.0, psi.cos(), 0.0, psi.sin()]);
+        let bpp = bp * rot_mat;
 
         // 4. Reorder into MWA-compliant Jones matrix
         let bppp = Jones::from([bpp[3], bpp[2], bpp[1], bpp[0]]);
