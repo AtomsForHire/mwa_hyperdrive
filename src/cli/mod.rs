@@ -105,7 +105,7 @@ https://mwatelescope.github.io/mwa_hyperdrive/user/vis_convert/intro.html"#)]
 https://mwatelescope.github.io/mwa_hyperdrive/user/vis_simulate/intro.html"#)]
     VisSimulate(vis_simulate::VisSimulateArgs),
 
-    #[clap(about = r#"Simulate visibilities but with SKA parameters")]
+    #[clap(about = r#"Simulate visibilities but with SKA parameters"#)]
     VisSimulateSka(vis_simulate_ska::VisSimulateSkaArgs),
 
     #[clap(alias = "subtract-vis")]
@@ -169,6 +169,7 @@ impl Hyperdrive {
             Command::DiCalibrate(_) => "di-calibrate",
             Command::VisConvert(_) => "vis-convert",
             Command::VisSimulate(_) => "vis-simulate",
+            Command::VisSimulateSka(_) => "vis-simulate-ska",
             Command::VisSubtract(_) => "vis-subtract",
             Command::SolutionsApply(_) => "solutions-apply",
             Command::SolutionsConvert(_) => "solutions-convert",
@@ -211,6 +212,10 @@ impl Hyperdrive {
             }
 
             Command::VisSimulate(args) => {
+                merge_save_run!(args)
+            }
+
+            Command::VisSimulateSka(args) => {
                 merge_save_run!(args)
             }
 
