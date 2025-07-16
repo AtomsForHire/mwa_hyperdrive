@@ -29,6 +29,7 @@ use vec1::Vec1;
 use crate::{
     averaging::channels_to_chanblocks,
     beam::Beam,
+    context::ObsContext,
     context::Polarisations,
     io::write::{write_vis, VisTimestep, VisWriteError},
     math::TileBaselineFlags,
@@ -44,7 +45,7 @@ pub(crate) struct VisSimulateSkaParams {
     pub(crate) source_list: SourceList,
 
     /// mwalib metafits context
-    pub(crate) metafits: MetafitsContext,
+    pub(crate) measurement_set: ObsContext,
 
     /// The output visibility files.
     pub(crate) output_vis_params: OutputVisParams,
@@ -89,7 +90,7 @@ impl VisSimulateSkaParams {
     pub(crate) fn run(&self) -> Result<(), VisSimulateError> {
         let VisSimulateSkaParams {
             source_list,
-            metafits,
+            measurement_set,
             output_vis_params:
                 OutputVisParams {
                     output_files,
@@ -214,7 +215,7 @@ impl VisSimulateSkaParams {
                             None,
                             tile_xyzs,
                             tile_names,
-                            Some(metafits.obs_id),
+                            Some(context.obsid),
                             output_timeblocks,
                             *time_res,
                             *dut1,
@@ -222,7 +223,8 @@ impl VisSimulateSkaParams {
                             &unflagged_baseline_tile_pairs,
                             *output_time_average_factor,
                             *output_freq_average_factor,
-                            Some(&MwaObsContext::from_mwalib(metafits)),
+                            //Some(&MwaObsContext::from_mwalib(metafits)),
+                            None,
                             *write_smallest_contiguous_band,
                             rx_model,
                             &error,
@@ -315,14 +317,14 @@ fn model_thread(
     Ok(())
 }
 
-#[derive(Error, Debug)]
-pub(crate) enum VisSimulateError {
-    #[error(transparent)]
-    VisWrite(#[from] crate::io::write::VisWriteError),
-
-    #[error(transparent)]
-    Model(#[from] crate::model::ModelError),
-
-    #[error(transparent)]
-    IO(#[from] std::io::Error),
-}
+// #[derive(Error, Debug)]
+// pub(crate) enum VisSimulateError {
+//     #[error(transparent)]
+//     VisWrite(#[from] crate::io::write::VisWriteError),
+//
+//     #[error(transparent)]
+//     Model(#[from] crate::model::ModelError),
+//
+//     #[error(transparent)]
+//     IO(#[from] std::io::Error),
+// }

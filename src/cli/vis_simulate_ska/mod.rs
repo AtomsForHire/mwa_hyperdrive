@@ -28,14 +28,16 @@ use super::common::{
 };
 use crate::{
     beam::Delays,
+    beam::SkaBeamParams,
     cli::common::InfoPrinter,
-    io::read::MsReader,
+    context::ObsContext,
+    io::read::{MsReader, VisRead},
     io::write::VIS_OUTPUT_EXTENSIONS,
     math::TileBaselineFlags,
     metafits::{get_dipole_delays, get_dipole_gains},
     params::VisSimulateSkaParams,
     srclist::ComponentCounts,
-    HyperdriveError, ObsContext,
+    HyperdriveError,
 };
 
 const DEFAULT_OUTPUT_VIS_FILENAME: &str = "hyp_model.uvfits";
@@ -172,10 +174,6 @@ pub(super) struct VisSimulateSkaCliArgs {
     /// Remove any "shapelet" components from the input sky model.
     #[clap(long, help_heading = "SKY MODEL")]
     filter_shapelets: bool,
-
-    /// Path to OSKAR sim.ms so that the same station coordinates can be used
-    #[clap(long, help_heading = "Eric J's changes")]
-    oskar_path: Option<Path>,
 }
 
 #[derive(Parser, Debug, Clone, Default, Serialize, Deserialize)]
@@ -201,7 +199,7 @@ pub(super) struct VisSimulateSkaArgs {
     #[clap(flatten)]
     #[serde(rename = "vis-simulate")]
     #[serde(default)]
-    pub(super) simulate_args: VisSimulateCliArgs,
+    pub(super) simulate_args: VisSimulateCliSkaArgs,
 }
 
 impl VisSimulateSkaArgs {
@@ -214,7 +212,7 @@ impl VisSimulateSkaArgs {
     ///
     /// This function should only ever merge arguments, and not try to make
     /// sense of them.
-    pub(super) fn merge(self) -> Result<VisSimulateArgs, HyperdriveError> {
+    pub(super) fn merge(self) -> Result<VisSimulateSkaArgs, HyperdriveError> {
         debug!("Merging command-line arguments with the argument file");
 
         let cli_args = self;
@@ -222,7 +220,7 @@ impl VisSimulateSkaArgs {
         if let Some(arg_file) = cli_args.args_file {
             // Read in the file arguments. Ensure all of the file args are
             // accounted for by pattern matching.
-            let VisSimulateArgs {
+            let VisSimulateSkaArgs {
                 args_file: _,
                 beam_args,
                 modelling_args,
@@ -231,7 +229,7 @@ impl VisSimulateSkaArgs {
             } = unpack_arg_file!(arg_file);
 
             // Merge all the arguments, preferring the CLI args when available.
-            Ok(VisSimulateArgs {
+            Ok(VisSimulateSkaArgs {
                 args_file: None,
                 beam_args: cli_args.beam_args.merge(beam_args),
                 modelling_args: cli_args.modelling_args.merge(modelling_args),
@@ -243,7 +241,7 @@ impl VisSimulateSkaArgs {
         }
     }
 
-    fn parse(self) -> Result<VisSimulateParams, HyperdriveError> {
+    fn parse(self) -> Result<VisSimulateSkaParams, HyperdriveError> {
         debug!("{:#?}", self);
 
         // Expose all the struct fields to ensure they're all used.
@@ -272,7 +270,6 @@ impl VisSimulateSkaArgs {
                     filter_points,
                     filter_gaussians,
                     filter_shapelets,
-                    oskar_path,
                 },
         } = self;
 
@@ -298,12 +295,12 @@ impl VisSimulateSkaArgs {
 
         let mut metadata_printer =
             InfoPrinter::new(format!("Simulating visibilities for OSKAR data set").into());
-        metadata_printer.push_line(format!("with {}", metafits.metafits_filename).into());
+        // metadata_printer.push_line(format!("with {}", metafits.metafits_filename).into());
         metadata_printer.display();
 
         let mut coord_printer = InfoPrinter::new("Coordinates".into());
         // Get the phase centre.
-        let phase_centre = match (ra, dec, &metafits) {
+        let phase_centre = match (ra, dec, &context) {
             (Some(ra), Some(dec), _) => {
                 // Verify that the input coordinates are sensible.
                 if !(0.0..=360.0).contains(&ra) {
@@ -316,18 +313,9 @@ impl VisSimulateSkaArgs {
             }
             (Some(_), None, _) => return Err(VisSimulateArgsError::OnlyOneRAOrDec.into()),
             (None, Some(_), _) => return Err(VisSimulateArgsError::OnlyOneRAOrDec.into()),
-            (None, None, m) => {
-                // The phase centre in a metafits file may not be present. If not,
-                // we have to use the pointing centre.
-                match (m.ra_phase_center_degrees, m.dec_phase_center_degrees) {
-                    (Some(ra), Some(dec)) => RADec::from_degrees(ra, dec),
-                    (None, None) => {
-                        RADec::from_degrees(m.ra_tile_pointing_degrees, m.dec_tile_pointing_degrees)
-                    }
-                    _ => unreachable!(),
-                }
-            }
+            (None, None, c) => c.phase_centre,
         };
+
         let mut block = vec![];
         block.push(
             style("                   RA        Dec")
@@ -335,16 +323,11 @@ impl VisSimulateSkaArgs {
                 .to_string()
                 .into(),
         );
-        if let Some((ra, dec)) = metafits
-            .ra_phase_center_degrees
-            .zip(metafits.dec_phase_center_degrees)
-        {
-            block.push(format!("Phase centre:      {:>8.4}° {:>8.4}° (J2000)", ra, dec).into());
-        }
+
         block.push(
             format!(
-                "Pointing centre:   {:>8.4}° {:>8.4}°",
-                metafits.ra_tile_pointing_degrees, metafits.dec_tile_pointing_degrees
+                "Phase centre:      {:>8.4}° {:>8.4}° (J2000)",
+                phase_centre.ra, phase_centre.dec
             )
             .into(),
         );
@@ -362,7 +345,7 @@ impl VisSimulateSkaArgs {
                     height_metres: v[2],
                 }
             }
-            None => LatLngHeight::mwa(),
+            None => context.array_position,
         };
         coord_printer.push_line(
             format!(
@@ -376,40 +359,27 @@ impl VisSimulateSkaArgs {
         coord_printer.display();
 
         // Get the geodetic XYZ coordinates of each of the MWA tiles.
-        let tile_xyzs = XyzGeodetic::get_tiles(&metafits, array_position.latitude_rad);
-        let tile_names: Vec<String> = metafits
-            .antennas
-            .iter()
-            .map(|a| a.tile_name.clone())
-            .collect();
+        let tile_xyzs = context.tile_xyzs;
+        let tile_names: Vec<String> = context.tile_names;
 
         // Prepare a map between baselines and their constituent tiles.
+        let num_tiles = tile_xyzs.len();
         let flagged_tiles = HashSet::new();
-        let tile_baseline_flags = TileBaselineFlags::new(metafits.num_ants, flagged_tiles);
+        let tile_baseline_flags = TileBaselineFlags::new(num_tiles, flagged_tiles);
 
         let mut tile_printer = InfoPrinter::new("Tile info".into());
         tile_printer.push_line(format!("{} tiles", tile_xyzs.len()).into());
         tile_printer.display();
 
-        let time_res = Duration::from_seconds(time_res.unwrap_or(DEFAULT_TIME_RES_SECONDS));
-        let timestamps = {
-            let num_timesteps = num_timesteps.unwrap_or(DEFAULT_NUM_TIMESTEPS);
-            let mut timestamps = Vec::with_capacity(num_timesteps);
-            let start_ns = metafits
-                .sched_start_gps_time_ms
-                .checked_mul(1_000_000)
-                .expect("does not overflow u64");
-            let start = Epoch::from_gpst_nanoseconds(start_ns)
-                + time_res / 2
-                + Duration::from_seconds(time_offset.unwrap_or_default());
-            for i in 0..num_timesteps {
-                timestamps.push(start + time_res * i as i64);
-            }
-            Vec1::try_from_vec(timestamps).map_err(|_| VisSimulateArgsError::ZeroTimeSteps)?
-        };
+        // let time_res = Duration::from_seconds(time_res.unwrap_or(DEFAULT_TIME_RES_SECONDS));
+        let time_res = context
+            .time_res
+            .unwrap_or(Duration::from_seconds(DEFAULT_TIME_RES_SECONDS));
+        let timestamps = context.timestamps.clone();
+
         let dut1 = match (ignore_dut1, dut1) {
             (true, _) => {
-                debug!("Ignoring metafits and user DUT1");
+                debug!("Ignoring measurement set and user DUT1");
                 Duration::default()
             }
             (false, Some(dut1)) => {
@@ -417,13 +387,11 @@ impl VisSimulateSkaArgs {
                 Duration::from_seconds(dut1)
             }
             (false, None) => {
-                debug!("Using metafits DUT1");
-                metafits
-                    .dut1
-                    .map(Duration::from_seconds)
-                    .unwrap_or_default()
+                debug!("Using measurement set DUT1");
+                context.dut1.map(Duration::from_seconds).unwrap_or_default()
             }
         };
+
         let precession_info = precess_time(
             array_position.longitude_rad,
             array_position.latitude_rad,
@@ -431,6 +399,7 @@ impl VisSimulateSkaArgs {
             *timestamps.first(),
             dut1,
         );
+
         let (lst_rad, latitude_rad) = if !modelling_args.no_precession {
             (
                 precession_info.lmst_j2000,
@@ -471,7 +440,10 @@ impl VisSimulateSkaArgs {
         }
         let middle_freq = middle_freq
             .map(|f| f * 1e6) // MHz -> Hz
-            .unwrap_or(metafits.centre_freq_hz as _);
+            .unwrap_or_else(|| {
+                let sum: f64 = context.fine_chan_freqs.iter().map(|&f| f as f64).sum();
+                sum / context.fine_chan_freqs.len() as f64
+            });
         let freq_res = freq_res * 1e3; // kHz -> Hz
         let fine_chan_freqs = {
             let half_num_fine_chans = num_fine_channels as f64 / 2.0;
@@ -526,13 +498,23 @@ impl VisSimulateSkaArgs {
         ]);
         chan_printer.display();
 
+        let ska_beam_params = SkaBeamParams {
+            phase_centre: obs_context.phase_centre,
+            ska_site_latitude_rad: latitude_rad,
+            reference_frequency_hz: freq_centroid,
+            number_of_stations: total_num_tiles,
+            feed_angles_rad: obs_context.feed_angles.clone(), // NOTE: Doing this for my own use case!!
+            feed_coordinates: obs_context.feed_coordindates.clone(),
+            ecef_to_local_mats: obs_context.ecef_to_local_mats.clone(),
+        };
+
         // TODO: Need to read in obs context from sim.ms
         let beam = beam_args.parse(
-            metafits.num_ants,
-            Some(Delays::Full(get_dipole_delays(&metafits))),
-            Some(get_dipole_gains(&metafits)),
-            None,
-            None,
+            num_tiles,
+            context.dipole_delays.clone(),
+            context.dipole_gains.clone(),
+            Some(context.input_data_type),
+            Some(ska_beam_params),
         )?;
         let modelling_params = modelling_args.parse();
 
@@ -580,7 +562,7 @@ impl VisSimulateSkaArgs {
 
         display_warnings();
 
-        Ok(VisSimulateParams {
+        Ok(VisSimulateSkaParams {
             source_list,
             metafits,
             output_vis_params,
@@ -614,40 +596,40 @@ impl VisSimulateSkaArgs {
     }
 }
 
-#[derive(Error, Debug)]
-pub(super) enum VisSimulateArgsError {
-    #[error("No metafits file was supplied")]
-    NoMetafits,
-
-    #[error("Metafits file '{0}' doesn't exist")]
-    MetafitsDoesntExist(Box<Path>),
-
-    #[error("Right Ascension was not within 0 to 360!")]
-    RaInvalid,
-
-    #[error("Declination was not within -90 to 90!")]
-    DecInvalid,
-
-    #[error("One of RA and Dec was specified, but none or both are required!")]
-    OnlyOneRAOrDec,
-
-    #[error("Number of fine channels cannot be 0!")]
-    FineChansZero,
-
-    #[error("The fine channel resolution cannot be 0 or negative!")]
-    FineChansWidthTooSmall,
-
-    #[error("Number of timesteps cannot be 0!")]
-    ZeroTimeSteps,
-
-    #[error("Array position specified as {pos:?}, not [<Longitude>, <Latitude>, <Height>]")]
-    BadArrayPosition { pos: Vec<f64> },
-}
+// #[derive(Error, Debug)]
+// pub(super) enum VisSimulateArgsError {
+//     #[error("No metafits file was supplied")]
+//     NoMetafits,
+//
+//     #[error("Metafits file '{0}' doesn't exist")]
+//     MetafitsDoesntExist(Box<Path>),
+//
+//     #[error("Right Ascension was not within 0 to 360!")]
+//     RaInvalid,
+//
+//     #[error("Declination was not within -90 to 90!")]
+//     DecInvalid,
+//
+//     #[error("One of RA and Dec was specified, but none or both are required!")]
+//     OnlyOneRAOrDec,
+//
+//     #[error("Number of fine channels cannot be 0!")]
+//     FineChansZero,
+//
+//     #[error("The fine channel resolution cannot be 0 or negative!")]
+//     FineChansWidthTooSmall,
+//
+//     #[error("Number of timesteps cannot be 0!")]
+//     ZeroTimeSteps,
+//
+//     #[error("Array position specified as {pos:?}, not [<Longitude>, <Latitude>, <Height>]")]
+//     BadArrayPosition { pos: Vec<f64> },
+// }
 
 impl VisSimulateSkaCliArgs {
     fn merge(self, other: Self) -> Self {
         Self {
-            metafits: self.metafits.or(other.metafits),
+            measurement_set: self.measurement_set.or(other.measurement_set),
             dut1: self.dut1.or(other.dut1),
             ignore_dut1: self.ignore_dut1 || other.ignore_dut1,
             ra: self.ra.or(other.ra),
