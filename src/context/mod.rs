@@ -73,6 +73,7 @@ impl Polarisations {
 ///
 /// Tile information is ordered according to the "Antenna" column in HDU 1 of
 /// the observation's metafits file.
+#[derive(Clone)]
 pub(crate) struct ObsContext {
     /// The format of the file containing the visibilities (e.g. uvfits).
     pub(crate) input_data_type: VisInputType,
