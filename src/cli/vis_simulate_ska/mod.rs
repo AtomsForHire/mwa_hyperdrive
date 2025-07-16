@@ -311,7 +311,8 @@ impl VisSimulateSkaArgs {
                 if !(-90.0..=90.0).contains(&dec) {
                     return Err(VisSimulateArgsError::DecInvalid.into());
                 }
-                RADec::from_degrees(ra, dec)
+                // RADec::from_degrees(ra, dec)
+                RADec::from_radians(ra, dec)
             }
             (Some(_), None, _) => return Err(VisSimulateArgsError::OnlyOneRAOrDec.into()),
             (None, Some(_), _) => return Err(VisSimulateArgsError::OnlyOneRAOrDec.into()),
@@ -329,7 +330,8 @@ impl VisSimulateSkaArgs {
         block.push(
             format!(
                 "Phase centre:      {:>8.4}° {:>8.4}° (J2000)",
-                phase_centre.ra, phase_centre.dec
+                phase_centre.ra.to_degrees(),
+                phase_centre.dec.to_degrees()
             )
             .into(),
         );
