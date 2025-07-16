@@ -105,6 +105,9 @@ https://mwatelescope.github.io/mwa_hyperdrive/user/vis_convert/intro.html"#)]
 https://mwatelescope.github.io/mwa_hyperdrive/user/vis_simulate/intro.html"#)]
     VisSimulate(vis_simulate::VisSimulateArgs),
 
+    #[clap(about = r#"Simulate visibilities but with SKA parameters")]
+    VisSimulateSka(vis_simulate_ska::VisSimulateSkaArgs),
+
     #[clap(alias = "subtract-vis")]
     #[clap(about = "Subtract sky-model sources from supplied visibilities.
 https://mwatelescope.github.io/mwa_hyperdrive/user/vis_subtract/intro.html")]
