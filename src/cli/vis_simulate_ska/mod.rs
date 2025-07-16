@@ -291,7 +291,7 @@ impl VisSimulateSkaArgs {
             None,
             None,
         )
-        .map_err(HyperdriveError::from)?;
+        .map_err(|e| HyperdriveError::Generic(e.to_string()))?;
 
         let context = ms_reader.get_obs_context();
 
@@ -566,7 +566,7 @@ impl VisSimulateSkaArgs {
 
         Ok(VisSimulateSkaParams {
             source_list,
-            context,
+            context: context.clone(),
             output_vis_params,
             phase_centre,
             fine_chan_freqs,

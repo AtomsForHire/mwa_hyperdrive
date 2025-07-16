@@ -215,7 +215,7 @@ impl VisSimulateSkaParams {
                             None,
                             tile_xyzs,
                             tile_names,
-                            Some(context.obsid),
+                            context.obsid,
                             output_timeblocks,
                             *time_res,
                             *dut1,
