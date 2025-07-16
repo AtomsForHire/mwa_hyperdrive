@@ -290,7 +290,8 @@ impl VisSimulateSkaArgs {
             None,
             None,
             None,
-        )?;
+        )
+        .map_err(HyperdriveError::from)?;
 
         let context = ms_reader.get_obs_context();
 
@@ -565,7 +566,7 @@ impl VisSimulateSkaArgs {
 
         Ok(VisSimulateSkaParams {
             source_list,
-            measurement_set,
+            context,
             output_vis_params,
             phase_centre,
             fine_chan_freqs,

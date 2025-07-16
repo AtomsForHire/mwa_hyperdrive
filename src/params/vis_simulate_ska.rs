@@ -45,7 +45,7 @@ pub(crate) struct VisSimulateSkaParams {
     pub(crate) source_list: SourceList,
 
     /// mwalib metafits context
-    pub(crate) measurement_set: ObsContext,
+    pub(crate) context: ObsContext,
 
     /// The output visibility files.
     pub(crate) output_vis_params: OutputVisParams,
@@ -90,7 +90,7 @@ impl VisSimulateSkaParams {
     pub(crate) fn run(&self) -> Result<(), VisSimulateError> {
         let VisSimulateSkaParams {
             source_list,
-            measurement_set,
+            context,
             output_vis_params:
                 OutputVisParams {
                     output_files,
@@ -215,7 +215,7 @@ impl VisSimulateSkaParams {
                             None,
                             tile_xyzs,
                             tile_names,
-                            Some(measurement_set.obsid),
+                            Some(context.obsid),
                             output_timeblocks,
                             *time_res,
                             *dut1,
