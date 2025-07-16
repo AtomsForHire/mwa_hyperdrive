@@ -34,7 +34,7 @@ use crate::{
     io::write::{write_vis, VisTimestep, VisWriteError},
     math::TileBaselineFlags,
     model::{self, ModelError},
-    params::{ModellingParams, OutputVisParams},
+    params::{ModellingParams, OutputVisParams, VisSimulateError},
     srclist::SourceList,
     PROGRESS_BARS,
 };
@@ -215,7 +215,7 @@ impl VisSimulateSkaParams {
                             None,
                             tile_xyzs,
                             tile_names,
-                            Some(context.obsid),
+                            Some(measurement_set.obsid),
                             output_timeblocks,
                             *time_res,
                             *dut1,

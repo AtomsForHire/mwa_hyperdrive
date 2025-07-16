@@ -360,8 +360,8 @@ impl VisSimulateSkaArgs {
         coord_printer.display();
 
         // Get the geodetic XYZ coordinates of each of the MWA tiles.
-        let tile_xyzs = context.tile_xyzs;
-        let tile_names: Vec<String> = context.tile_names;
+        let tile_xyzs = context.tile_xyzs.to_vec();
+        let tile_names: Vec<String> = context.tile_names.to_vec();
 
         // Prepare a map between baselines and their constituent tiles.
         let num_tiles = tile_xyzs.len();
@@ -389,7 +389,7 @@ impl VisSimulateSkaArgs {
             }
             (false, None) => {
                 debug!("Using measurement set DUT1");
-                context.dut1.map(Duration::from_seconds).unwrap_or_default()
+                context.dut1.unwrap_or_default()
             }
         };
 
@@ -502,7 +502,7 @@ impl VisSimulateSkaArgs {
         let ska_beam_params = SkaBeamParams {
             phase_centre: context.phase_centre,
             ska_site_latitude_rad: latitude_rad,
-            reference_frequency_hz: freq_centroid,
+            reference_frequency_hz: middle_freq,
             number_of_stations: num_tiles,
             feed_angles_rad: context.feed_angles.clone(),
             feed_coordinates: context.feed_coordindates.clone(),
@@ -565,7 +565,7 @@ impl VisSimulateSkaArgs {
 
         Ok(VisSimulateSkaParams {
             source_list,
-            metafits,
+            measurement_set,
             output_vis_params,
             phase_centre,
             fine_chan_freqs,
