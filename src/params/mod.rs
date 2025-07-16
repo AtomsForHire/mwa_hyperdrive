@@ -15,6 +15,7 @@ mod input_vis;
 mod solutions_apply;
 mod vis_convert;
 mod vis_simulate;
+mod vis_simulate_ska;
 mod vis_subtract;
 
 #[cfg(test)]
@@ -24,6 +25,7 @@ pub(crate) use input_vis::InputVisParams;
 pub(crate) use solutions_apply::SolutionsApplyParams;
 pub(crate) use vis_convert::{VisConvertError, VisConvertParams};
 pub(crate) use vis_simulate::{VisSimulateError, VisSimulateParams};
+pub(crate) use vis_simulate_ska::VisSimulateSkaParams;
 pub(crate) use vis_subtract::{VisSubtractError, VisSubtractParams};
 
 use std::{num::NonZeroUsize, path::PathBuf};

@@ -29,12 +29,13 @@ use super::common::{
 use crate::{
     beam::Delays,
     cli::common::InfoPrinter,
+    io::read::MsReader,
     io::write::VIS_OUTPUT_EXTENSIONS,
     math::TileBaselineFlags,
     metafits::{get_dipole_delays, get_dipole_gains},
-    params::VisSimulateParams,
+    params::VisSimulateSkaParams,
     srclist::ComponentCounts,
-    HyperdriveError,
+    HyperdriveError, ObsContext,
 };
 
 const DEFAULT_OUTPUT_VIS_FILENAME: &str = "hyp_model.uvfits";
@@ -61,10 +62,10 @@ lazy_static::lazy_static! {
 }
 
 #[derive(Parser, Debug, Clone, Default, Serialize, Deserialize)]
-pub(super) struct VisSimulateCliArgs {
+pub(super) struct VisSimulateSkaCliArgs {
     /// Path to the metafits file.
     #[clap(short, long, parse(from_str), help_heading = "INPUT FILES")]
-    pub(super) metafits: Option<PathBuf>,
+    pub(super) measurement_set: Option<PathBuf>,
 
     /// Use this value as the DUT1 [seconds].
     #[clap(long, help_heading = "INPUT DATA")]
@@ -178,7 +179,7 @@ pub(super) struct VisSimulateCliArgs {
 }
 
 #[derive(Parser, Debug, Clone, Default, Serialize, Deserialize)]
-pub(super) struct VisSimulateArgs {
+pub(super) struct VisSimulateSkaArgs {
     #[clap(name = "ARGUMENTS_FILE", help = ARG_FILE_HELP.as_str(), parse(from_os_str))]
     pub(super) args_file: Option<PathBuf>,
 
@@ -203,7 +204,7 @@ pub(super) struct VisSimulateArgs {
     pub(super) simulate_args: VisSimulateCliArgs,
 }
 
-impl VisSimulateArgs {
+impl VisSimulateSkaArgs {
     /// Both command-line and file arguments overlap in terms of what is
     /// available; this function consolidates everything that was specified into
     /// a single struct. Where applicable, it will prefer CLI parameters over
@@ -252,8 +253,8 @@ impl VisSimulateArgs {
             modelling_args,
             srclist_args,
             simulate_args:
-                VisSimulateCliArgs {
-                    metafits,
+                VisSimulateSkaCliArgs {
+                    measurement_set,
                     dut1,
                     ignore_dut1,
                     ra,
@@ -275,21 +276,28 @@ impl VisSimulateArgs {
                 },
         } = self;
 
-        // Read the metafits file with mwalib.
-        let metafits = if let Some(metafits) = metafits {
-            if !metafits.exists() {
-                return Err(
-                    VisSimulateArgsError::MetafitsDoesntExist(metafits.into_boxed_path()).into(),
-                );
-            }
-            MetafitsContext::new(metafits, None)?
-        } else {
-            return Err(VisSimulateArgsError::NoMetafits.into());
-        };
+        // Read the measurement_set
+        // let metafits = if let Some(metafits) = measurement_set {
+        //     if !metafits.exists() {
+        //         return Err(
+        //             VisSimulateArgsError::MetafitsDoesntExist(metafits.into_boxed_path()).into(),
+        //         );
+        //     }
+        //     MetafitsContext::new(metafits, None)?
+        // } else {
+        //     return Err(VisSimulateArgsError::NoMetafits.into());
+        // };
+        let ms_reader = MsReader::new(
+            measurement_set.expect("Need to define a path to an OSKAR measurement set"),
+            None,
+            None,
+            None,
+        )?;
 
-        let mut metadata_printer = InfoPrinter::new(
-            format!("Simulating visibilities for obsid {}", metafits.obs_id).into(),
-        );
+        let context = ms_reader.get_obs_context();
+
+        let mut metadata_printer =
+            InfoPrinter::new(format!("Simulating visibilities for OSKAR data set").into());
         metadata_printer.push_line(format!("with {}", metafits.metafits_filename).into());
         metadata_printer.display();
 
@@ -636,7 +644,7 @@ pub(super) enum VisSimulateArgsError {
     BadArrayPosition { pos: Vec<f64> },
 }
 
-impl VisSimulateCliArgs {
+impl VisSimulateSkaCliArgs {
     fn merge(self, other: Self) -> Self {
         Self {
             metafits: self.metafits.or(other.metafits),

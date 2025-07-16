@@ -22,6 +22,7 @@ mod solutions;
 mod srclist;
 mod vis_convert;
 mod vis_simulate;
+mod vis_simulate_ska;
 mod vis_subtract;
 
 pub(crate) use common::Warn;
