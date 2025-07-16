@@ -30,12 +30,13 @@ use crate::{
     beam::Delays,
     beam::SkaBeamParams,
     cli::common::InfoPrinter,
+    cli::vis_simulate::VisSimulateArgsError,
     context::ObsContext,
     io::read::{MsReader, VisRead},
     io::write::VIS_OUTPUT_EXTENSIONS,
     math::TileBaselineFlags,
     metafits::{get_dipole_delays, get_dipole_gains},
-    params::VisSimulateSkaParams,
+    params::{VisSimulateError, VisSimulateSkaParams},
     srclist::ComponentCounts,
     HyperdriveError,
 };
@@ -199,7 +200,7 @@ pub(super) struct VisSimulateSkaArgs {
     #[clap(flatten)]
     #[serde(rename = "vis-simulate")]
     #[serde(default)]
-    pub(super) simulate_args: VisSimulateCliSkaArgs,
+    pub(super) simulate_args: VisSimulateSkaCliArgs,
 }
 
 impl VisSimulateSkaArgs {
@@ -245,7 +246,7 @@ impl VisSimulateSkaArgs {
         debug!("{:#?}", self);
 
         // Expose all the struct fields to ensure they're all used.
-        let VisSimulateArgs {
+        let VisSimulateSkaArgs {
             args_file: _,
             beam_args,
             modelling_args,
@@ -499,13 +500,13 @@ impl VisSimulateSkaArgs {
         chan_printer.display();
 
         let ska_beam_params = SkaBeamParams {
-            phase_centre: obs_context.phase_centre,
+            phase_centre: context.phase_centre,
             ska_site_latitude_rad: latitude_rad,
             reference_frequency_hz: freq_centroid,
-            number_of_stations: total_num_tiles,
-            feed_angles_rad: obs_context.feed_angles.clone(), // NOTE: Doing this for my own use case!!
-            feed_coordinates: obs_context.feed_coordindates.clone(),
-            ecef_to_local_mats: obs_context.ecef_to_local_mats.clone(),
+            number_of_stations: num_tiles,
+            feed_angles_rad: context.feed_angles.clone(),
+            feed_coordinates: context.feed_coordindates.clone(),
+            ecef_to_local_mats: context.ecef_to_local_mats.clone(),
         };
 
         // TODO: Need to read in obs context from sim.ms

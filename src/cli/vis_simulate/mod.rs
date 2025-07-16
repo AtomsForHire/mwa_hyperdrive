@@ -171,10 +171,6 @@ pub(super) struct VisSimulateCliArgs {
     /// Remove any "shapelet" components from the input sky model.
     #[clap(long, help_heading = "SKY MODEL")]
     filter_shapelets: bool,
-
-    /// Path to OSKAR sim.ms so that the same station coordinates can be used
-    #[clap(long, help_heading = "Eric J's changes")]
-    oskar_path: Option<Path>,
 }
 
 #[derive(Parser, Debug, Clone, Default, Serialize, Deserialize)]
@@ -271,7 +267,6 @@ impl VisSimulateArgs {
                     filter_points,
                     filter_gaussians,
                     filter_shapelets,
-                    oskar_path,
                 },
         } = self;
 
