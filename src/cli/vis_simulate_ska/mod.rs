@@ -373,6 +373,9 @@ impl VisSimulateSkaArgs {
 
         let mut tile_printer = InfoPrinter::new("Tile info".into());
         tile_printer.push_line(format!("{} tiles", tile_xyzs.len()).into());
+        for i in 0..num_tiles {
+            tile_printer.push_line(format!("{:?}", tile_xyzs[i]));
+        }
         tile_printer.display();
 
         // let time_res = Duration::from_seconds(time_res.unwrap_or(DEFAULT_TIME_RES_SECONDS));
