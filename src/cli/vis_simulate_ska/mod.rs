@@ -374,7 +374,9 @@ impl VisSimulateSkaArgs {
         let mut tile_printer = InfoPrinter::new("Tile info".into());
         tile_printer.push_line(format!("{} tiles", tile_xyzs.len()).into());
         for i in 0..num_tiles {
-            tile_printer.push_line(format!("{:?}", tile_xyzs[i]).into());
+            tile_printer.push_line(
+                format!("{:?}", tile_xyzs[i].to_geocentric(context.array_position)).into(),
+            );
         }
         tile_printer.display();
 
