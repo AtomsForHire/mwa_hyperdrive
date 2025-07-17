@@ -360,6 +360,22 @@ impl VisSimulateSkaArgs {
             )
             .into(),
         );
+
+        let mut block2 = vec![];
+        block2.push(
+            style("                   Ha        Dec")
+                .bold()
+                .to_string()
+                .into(),
+        );
+        block2.push(
+            format!(
+                "Phase centre:      {:>8.4}° {:>8.4}° (J2000)",
+                phase_centre.to_hadec().to_degrees(),
+                phase_centre.dec.to_degrees()
+            )
+            .into(),
+        );
         coord_printer.display();
 
         // Get the geodetic XYZ coordinates of each of the MWA tiles.
@@ -374,8 +390,13 @@ impl VisSimulateSkaArgs {
         let mut tile_printer = InfoPrinter::new("Tile info".into());
         tile_printer.push_line(format!("{} tiles", tile_xyzs.len()).into());
         for i in 0..num_tiles {
+            tile_printer.push_line(format!("Tile {i} Geodetic: {:?}", tile_xyzs[i]).into());
             tile_printer.push_line(
-                format!("{:?}", tile_xyzs[i].to_geocentric(context.array_position)).into(),
+                format!(
+                    "Tile {i} Geocentric: {:?}",
+                    tile_xyzs[i].to_geocentric(context.array_position)
+                )
+                .into(),
             );
         }
         tile_printer.display();
@@ -437,6 +458,7 @@ impl VisSimulateSkaArgs {
                 precession_info.lmst_j2000.to_degrees()
             )
             .into(),
+            format!("With LST: {:.6}", lst_rad).into(),
         ]);
         time_printer.push_line(format!("DUT1: {:.10} s", dut1.to_seconds()).into());
         time_printer.display();
