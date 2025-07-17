@@ -363,7 +363,6 @@ impl VisSimulateSkaArgs {
 
         coord_printer.display();
 
-        // let time_res = Duration::from_seconds(time_res.unwrap_or(DEFAULT_TIME_RES_SECONDS));
         let time_res = context
             .time_res
             .unwrap_or(Duration::from_seconds(DEFAULT_TIME_RES_SECONDS));
@@ -382,6 +381,23 @@ impl VisSimulateSkaArgs {
                 debug!("Using measurement set DUT1");
                 context.dut1.unwrap_or_default()
             }
+        };
+
+        let precession_info = precess_time(
+            array_position.longitude_rad,
+            array_position.latitude_rad,
+            phase_centre,
+            *timestamps.first(),
+            dut1,
+        );
+
+        let (lst_rad, latitude_rad) = if !modelling_args.no_precession {
+            (
+                precession_info.lmst_j2000,
+                precession_info.array_latitude_j2000,
+            )
+        } else {
+            (precession_info.lmst, array_position.latitude_rad)
         };
 
         let mut time_printer = InfoPrinter::new("Time info".into());
@@ -438,6 +454,8 @@ impl VisSimulateSkaArgs {
             );
         }
         tile_printer.display();
+
+        // let time_res = Duration::from_seconds(time_res.unwrap_or(DEFAULT_TIME_RES_SECONDS));
 
         // Get the fine channel frequencies.
         let freq_res = freq_res.unwrap_or(DEFAULT_FREQ_RES_KHZ);
