@@ -363,54 +363,6 @@ impl VisSimulateSkaArgs {
 
         coord_printer.display();
 
-        // Moved this here so that I can use lst_rad when printing out UVWs
-        let precession_info = precess_time(
-            array_position.longitude_rad,
-            array_position.latitude_rad,
-            phase_centre,
-            *timestamps.first(),
-            dut1,
-        );
-
-        let (lst_rad, latitude_rad) = if !modelling_args.no_precession {
-            (
-                precession_info.lmst_j2000,
-                precession_info.array_latitude_j2000,
-            )
-        } else {
-            (precession_info.lmst, array_position.latitude_rad)
-        };
-
-        // Get the geodetic XYZ coordinates of each of the MWA tiles.
-        let tile_xyzs = context.tile_xyzs.to_vec();
-        let tile_names: Vec<String> = context.tile_names.to_vec();
-
-        // Prepare a map between baselines and their constituent tiles.
-        let num_tiles = tile_xyzs.len();
-        let flagged_tiles = HashSet::new();
-        let tile_baseline_flags = TileBaselineFlags::new(num_tiles, flagged_tiles);
-
-        let mut tile_printer = InfoPrinter::new("Tile info".into());
-        tile_printer.push_line(format!("{} tiles", tile_xyzs.len()).into());
-        for i in 0..num_tiles {
-            tile_printer.push_line(format!("Tile {i} Geodetic: {:?}", tile_xyzs[i]).into());
-            tile_printer.push_line(
-                format!(
-                    "Tile {i} Geocentric: {:?}",
-                    tile_xyzs[i].to_geocentric(context.array_position)
-                )
-                .into(),
-            );
-            tile_printer.push_line(
-                format!(
-                    "Tile {i} UVW: {:?}",
-                    UVW::from_xyz(tile_xyzs[i], phase_centre.to_hadec(lst_rad))
-                )
-                .into(),
-            );
-        }
-        tile_printer.display();
-
         // let time_res = Duration::from_seconds(time_res.unwrap_or(DEFAULT_TIME_RES_SECONDS));
         let time_res = context
             .time_res
@@ -456,6 +408,36 @@ impl VisSimulateSkaArgs {
         ]);
         time_printer.push_line(format!("DUT1: {:.10} s", dut1.to_seconds()).into());
         time_printer.display();
+
+        // Get the geodetic XYZ coordinates of each of the MWA tiles.
+        let tile_xyzs = context.tile_xyzs.to_vec();
+        let tile_names: Vec<String> = context.tile_names.to_vec();
+
+        // Prepare a map between baselines and their constituent tiles.
+        let num_tiles = tile_xyzs.len();
+        let flagged_tiles = HashSet::new();
+        let tile_baseline_flags = TileBaselineFlags::new(num_tiles, flagged_tiles);
+
+        let mut tile_printer = InfoPrinter::new("Tile info".into());
+        tile_printer.push_line(format!("{} tiles", tile_xyzs.len()).into());
+        for i in 0..num_tiles {
+            tile_printer.push_line(format!("Tile {i} Geodetic: {:?}", tile_xyzs[i]).into());
+            tile_printer.push_line(
+                format!(
+                    "Tile {i} Geocentric: {:?}",
+                    tile_xyzs[i].to_geocentric(context.array_position)
+                )
+                .into(),
+            );
+            tile_printer.push_line(
+                format!(
+                    "Tile {i} UVW: {:?}",
+                    UVW::from_xyz(tile_xyzs[i], phase_centre.to_hadec(lst_rad))
+                )
+                .into(),
+            );
+        }
+        tile_printer.display();
 
         // Get the fine channel frequencies.
         let freq_res = freq_res.unwrap_or(DEFAULT_FREQ_RES_KHZ);
