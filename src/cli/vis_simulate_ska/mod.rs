@@ -361,21 +361,6 @@ impl VisSimulateSkaArgs {
             .into(),
         );
 
-        let mut block2 = vec![];
-        block2.push(
-            style("                   Ha        Dec")
-                .bold()
-                .to_string()
-                .into(),
-        );
-        block2.push(
-            format!(
-                "Phase centre:      {:>8.4}° {:>8.4}° (J2000)",
-                phase_centre.to_hadec().to_degrees(),
-                phase_centre.dec.to_degrees()
-            )
-            .into(),
-        );
         coord_printer.display();
 
         // Get the geodetic XYZ coordinates of each of the MWA tiles.
