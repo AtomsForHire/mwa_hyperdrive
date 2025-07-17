@@ -444,7 +444,7 @@ impl VisSimulateSkaArgs {
             )
             .into(),
             format!("With LST: {:.6}", lst_rad).into(),
-            format!("Phase HADec: {:?}", phase_centre.to_hadec(lst_rad)),
+            format!("Phase HADec: {:?}", phase_centre.to_hadec(lst_rad)).into(),
         ]);
         time_printer.push_line(format!("DUT1: {:.10} s", dut1.to_seconds()).into());
         time_printer.display();
