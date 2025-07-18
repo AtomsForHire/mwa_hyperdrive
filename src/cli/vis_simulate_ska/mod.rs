@@ -469,13 +469,21 @@ impl VisSimulateSkaArgs {
                 let sum: f64 = context.fine_chan_freqs.iter().map(|&f| f as f64).sum();
                 sum / context.fine_chan_freqs.len() as f64
             });
-        let freq_res = freq_res * 1e3; // kHz -> Hz
+        // let freq_res = freq_res * 1e3; // kHz -> Hz
+        // let fine_chan_freqs = {
+        //     let half_num_fine_chans = num_fine_channels as f64 / 2.0;
+        //     let mut fine_chan_freqs = Vec::with_capacity(num_fine_channels);
+        //     for i in 0..num_fine_channels {
+        //         fine_chan_freqs
+        //             .push(middle_freq - half_num_fine_chans * freq_res + freq_res * i as f64);
+        //     }
+        //     Vec1::try_from_vec(fine_chan_freqs).map_err(|_| VisSimulateArgsError::FineChansZero)?
+        // };
         let fine_chan_freqs = {
-            let half_num_fine_chans = num_fine_channels as f64 / 2.0;
+            let start_freq = context.fine_chan_freqs[0] as f64; // or use your known OSKAR start frequency
             let mut fine_chan_freqs = Vec::with_capacity(num_fine_channels);
             for i in 0..num_fine_channels {
-                fine_chan_freqs
-                    .push(middle_freq - half_num_fine_chans * freq_res + freq_res * i as f64);
+                fine_chan_freqs.push(start_freq + i as f64 * freq_res);
             }
             Vec1::try_from_vec(fine_chan_freqs).map_err(|_| VisSimulateArgsError::FineChansZero)?
         };
