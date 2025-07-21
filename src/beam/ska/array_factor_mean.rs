@@ -89,7 +89,6 @@ impl SkaArrayFactorMeanBeam {
 
         let num_stations = self.feed_angles_rad.len();
 
-        println!("{num_stations}");
         for j in 0..num_stations {
             let mut array_factor_station = Complex::from(0.0);
             // get element coordinates and transformation matrix for station 'index'
@@ -98,13 +97,11 @@ impl SkaArrayFactorMeanBeam {
             // transformation matrix, so we can just multiply the coordinates by the saved matrix.
             let coordinates: &Array2<f64> = &self.feed_coordinates[j];
             let ecef_to_local_mat: &Array2<f64> = &self.ecef_to_local_mats[j];
-            let num_elems = coordinates.len();
-            println!("{num_elems}");
+            let num_elems = coordinates.nrows();
 
             for i in 0..num_elems {
                 // Transform the coordinates
                 let transformed_coordinates = coordinates.dot(ecef_to_local_mat);
-                let num_elems = coordinates.nrows();
 
                 let x_loc = transformed_coordinates[[i, 0]];
                 let y_loc = transformed_coordinates[[i, 1]];
