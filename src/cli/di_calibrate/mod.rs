@@ -319,7 +319,7 @@ impl DiCalArgs {
                 let veto_beam = veto_beam_args.parse(
                     total_num_tiles,
                     obs_context.dipole_delays.clone(),
-                    obs_context.dipole_gains,
+                    obs_context.dipole_gains.clone(),
                     Some(obs_context.input_data_type),
                     Some(ska_beam_params),
                 )?;

@@ -575,7 +575,7 @@ impl VisSimulateSkaArgs {
                 let veto_beam = veto_beam_args.parse(
                     num_tiles,
                     context.dipole_delays.clone(),
-                    context.dipole_gains,
+                    context.dipole_gains.clone(),
                     Some(context.input_data_type),
                     Some(ska_beam_params),
                 )?;
