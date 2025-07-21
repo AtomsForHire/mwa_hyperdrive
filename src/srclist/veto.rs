@@ -96,12 +96,12 @@ pub(crate) fn veto_sources(
                 for (comp, azel) in source.components.iter().zip(azels.iter()) {
                     // Get the beam response at this source position and
                     // frequency.
-                    let j = match adjusted_beam.calc_jones(
+                    let j = match beam.calc_jones(
                         *azel,
                         cc_freq,
                         Some(0), // TODO: At the moment veto-ing sky sources based solely on the
                         // 0th station beam response on the sky!
-                        match adjusted_beam.get_beam_type() {
+                        match beam.get_beam_type() {
                             BeamType::SkaAiry | BeamType::SkaGaussian | BeamType::SkaArrayFactor | BeamType::SkaArrayFactorMean => lst_rad,
                             _ => array_latitude_rad
                             }) {

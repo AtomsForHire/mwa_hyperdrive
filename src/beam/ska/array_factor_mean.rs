@@ -59,7 +59,7 @@ impl SkaArrayFactorMeanBeam {
         tile_index: Option<usize>,
     ) -> Jones<f64> {
         // Feed angles, euler angles, azimutal angles from x to y, N of E. Two elements [x, y]
-        let phi_pq: &Vec<f64> = &self.feed_angles_rad[index];
+        // let phi_pq: &Vec<f64> = &self.feed_angles_rad[index]
 
         // Convert frequency to wavelength
         let lambda = SPEED_OF_LIGHT / freq_hz;
@@ -120,12 +120,12 @@ impl SkaArrayFactorMeanBeam {
             }
 
             // Normalise complex Array Factor
-            let af_norm = array_factor / num_elems as f64;
+            let af_norm = array_factor_station / num_elems as f64;
 
             array_factor_mean += array_factor_station;
         }
 
-        array_factor_mean /= num_stations;
+        array_factor_mean /= num_stations as f64;
 
         // 1.1 Embedded Element Pattern for crossed dipoles
         // This is assuming the dipoles are aligned with the x and y axis. i.e. NO ROTATION!
@@ -146,10 +146,10 @@ impl SkaArrayFactorMeanBeam {
         let numer_p = (kl * phi_p.cos() * theta.sin()).cos() - kl.cos();
         let numer_q = (kl * (phi_q).cos() * theta.sin()).cos() - kl.cos();
 
-        let e_p_theta = (-phi_p.cos() * theta.cos() * numer_p) / denom_p * af_norm;
-        let e_p_phi = (phi_p.sin() * numer_p) / denom_p * af_norm;
-        let e_q_theta = (-(phi_q).cos() * theta.cos() * numer_q) / denom_q * af_norm;
-        let e_q_phi = ((phi_q).sin() * numer_q) / denom_q * af_norm;
+        let e_p_theta = (-phi_p.cos() * theta.cos() * numer_p) / denom_p * array_factor_mean;
+        let e_p_phi = (phi_p.sin() * numer_p) / denom_p * array_factor_mean;
+        let e_q_theta = (-(phi_q).cos() * theta.cos() * numer_q) / denom_q * array_factor_mean;
+        let e_q_phi = ((phi_q).sin() * numer_q) / denom_q * array_factor_mean;
 
         // Steps outlined in hyperbeam fee_pols.pdf is specifically made for the FEE MWA beam.
         // We do not use the FEE mwa beam here, so don't follow it.
@@ -188,7 +188,7 @@ impl SkaArrayFactorMeanBeam {
 
 impl Beam for SkaArrayFactorMeanBeam {
     fn get_beam_type(&self) -> BeamType {
-        BeamType::SkaArrayFactorMeanBeam
+        BeamType::SkaArrayFactorMean
     }
 
     fn get_num_tiles(&self) -> usize {
@@ -215,7 +215,7 @@ impl Beam for SkaArrayFactorMeanBeam {
             ..
         } = self.phase_centre.to_lmn(zenith_radec);
 
-        Ok(SkaArrayFactorBeam::calc_jones_inner(
+        Ok(SkaArrayFactorMeanBeam::calc_jones_inner(
             self,
             azel,
             freq_hz,
@@ -260,7 +260,7 @@ impl Beam for SkaArrayFactorMeanBeam {
             .par_iter()
             .zip(results.par_iter_mut())
             .for_each(|(&azel, result)| {
-                *result = SkaArrayFactorBeam::calc_jones_inner(
+                *result = SkaArrayFactorMeanBeam::calc_jones_inner(
                     self,
                     azel,
                     freq_hz,
@@ -285,7 +285,7 @@ impl Beam for SkaArrayFactorMeanBeam {
                 .map(|usize| usize as i32)
                 .collect::<Vec<_>>(),
         )?;
-        let obj = SkaArrayFactorBeamGpu {
+        let obj = SkaArrayFactorMeanBeamGpu {
             // cpu_object: *self,
             cpu_object: self.clone(),
             freqs_hz: freqs_hz.to_vec(),
@@ -315,15 +315,15 @@ impl Beam for SkaArrayFactorMeanBeam {
 }
 
 #[cfg(any(feature = "cuda", feature = "hip"))]
-pub(crate) struct SkaArrayFactorBeamGpu {
-    cpu_object: SkaArrayFactorBeam,
+pub(crate) struct SkaArrayFactorMeanBeamGpu {
+    cpu_object: SkaArrayFactorMeanBeam,
     freqs_hz: Vec<u32>,
     tile_map: DevicePointer<i32>,
     freq_map: DevicePointer<i32>,
 }
 
 #[cfg(any(feature = "cuda", feature = "hip"))]
-impl BeamGpu for SkaArrayFactorBeamGpu {
+impl BeamGpu for SkaArrayFactorMeanBeamGpu {
     unsafe fn calc_jones_pair(
         &self,
         az_rad: &[GpuFloat],
@@ -402,7 +402,7 @@ impl BeamGpu for SkaArrayFactorBeamGpu {
     }
 
     fn get_num_unique_tiles(&self) -> i32 {
-        self.SkaArrayFactorBeam.station_angle_rad.len();
+        self.SkaArrayFactorMeanBeam.station_angle_rad.len();
     }
 
     fn get_num_unique_freqs(&self) -> i32 {
@@ -420,7 +420,7 @@ mod tests {
     fn test_airy_calc_jones_inner() {
         let freq_hz = 106000000.;
         let lst_rad = 5.769848203643869;
-        let beam = SkaArrayFactorBeam;
+        let beam = SkaArrayFactorMeanBeam;
 
         let azel = AzEl::from_radians(2.00370398, 1.00922628);
         let jones = beam.calc_jones(azel, freq_hz, None, lst_rad).unwrap();

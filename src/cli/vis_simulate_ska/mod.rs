@@ -27,7 +27,7 @@ use super::common::{
     ARRAY_POSITION_HELP,
 };
 use crate::{
-    beam::{BeamType, Delays, SkaBeamParams},
+    beam::{Beam, BeamType, Delays, SkaBeamParams},
     cli::{common::InfoPrinter, vis_simulate::VisSimulateArgsError},
     context::ObsContext,
     io::{
@@ -551,9 +551,9 @@ impl VisSimulateSkaArgs {
         let modelling_params = modelling_args.parse();
 
         // Veto with the mean beam
-        let veto_beam: Box<dyn Beam> = match beam_args.beam_type {
-            BeamType::SkaArrayFactor => {
-                BeamArgs {
+        let veto_beam: Box<dyn Beam> = match beam_args.beam_type.as_deref() {
+            Some("ska_array_factor_mean") => {
+                let veto_beam_args = BeamArgs {
                     beam_type: "ska_array_factor_mean",
                     no_beam: false,
                     delays: None,
