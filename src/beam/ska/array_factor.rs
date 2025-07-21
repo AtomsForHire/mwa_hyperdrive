@@ -181,7 +181,7 @@ impl SkaArrayFactorBeam {
 
 impl Beam for SkaArrayFactorBeam {
     fn get_beam_type(&self) -> BeamType {
-        BeamType::SkaAiry
+        BeamType::SkaArrayFactor
     }
 
     fn get_num_tiles(&self) -> usize {
