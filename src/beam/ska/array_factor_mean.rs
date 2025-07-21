@@ -87,8 +87,9 @@ impl SkaArrayFactorMeanBeam {
         //    components of the electric field?
         let mut array_factor_mean = Complex::from(0.0);
 
-        let num_stations = self.feed_coordinates.len();
+        let num_stations = self.feed_angles_rad.len();
 
+        println!("{num_stations}");
         for j in 0..num_stations {
             let mut array_factor_station = Complex::from(0.0);
             // get element coordinates and transformation matrix for station 'index'
@@ -98,6 +99,7 @@ impl SkaArrayFactorMeanBeam {
             let coordinates: &Array2<f64> = &self.feed_coordinates[j];
             let ecef_to_local_mat: &Array2<f64> = &self.ecef_to_local_mats[j];
             let num_elems = coordinates.len();
+            println!("{num_elems}");
 
             for i in 0..num_elems {
                 // Transform the coordinates

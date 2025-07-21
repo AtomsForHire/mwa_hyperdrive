@@ -563,7 +563,7 @@ impl VisSimulateSkaArgs {
 
         // Veto with the mean beam
         let veto_beam: Box<dyn Beam> = match beam_args.beam_type.as_deref() {
-            Some("ska_array_factor_mean") => {
+            Some("ska_array_factor") => {
                 let veto_beam_args = BeamArgs {
                     beam_type: Some("ska_array_factor_mean".to_owned()),
                     no_beam: false,
