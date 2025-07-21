@@ -277,7 +277,9 @@ impl BeamArgs {
             BeamType::SkaArrayFactor => {
                 printer.push_line("Type: SKA Array Factor".into());
                 let params = array_params.ok_or_else(|| {
-                    BeamError::Unrecognised("No ska params created need by SkaGaussian".to_owned())
+                    BeamError::Unrecognised(
+                        "No ska params created need by SkaArrayFactor".to_owned(),
+                    )
                 })?;
                 printer.push_line(format!("Number of tiles: {}", params.number_of_stations).into());
                 printer.push_line(
@@ -293,6 +295,29 @@ impl BeamArgs {
                 );
 
                 Box::new(crate::beam::SkaArrayFactorBeam::new(params))
+            }
+
+            BeamType::SkaArrayFactorMean => {
+                printer.push_line("Type: SKA Array Factor Mean".into());
+                let params = array_params.ok_or_else(|| {
+                    BeamError::Unrecognised(
+                        "No ska params created need by SkaArrayFactorMean".to_owned(),
+                    )
+                })?;
+                printer.push_line(format!("Number of tiles: {}", params.number_of_stations).into());
+                printer.push_line(
+                    format!("Reference frequency: {}", params.reference_frequency_hz).into(),
+                );
+                printer.push_line(
+                    format!(
+                        "Phase centre:      {:>8.4}° {:>8.4}° (J2000)",
+                        params.phase_centre.ra.to_degrees(),
+                        params.phase_centre.dec.to_degrees()
+                    )
+                    .into(),
+                );
+
+                Box::new(crate::beam::SkaArrayFactorMeanBeam::new(params))
             }
         };
 

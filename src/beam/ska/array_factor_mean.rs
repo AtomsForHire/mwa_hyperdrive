@@ -58,23 +58,8 @@ impl SkaArrayFactorMeanBeam {
         cent_m: f64,
         tile_index: Option<usize>,
     ) -> Jones<f64> {
-        let index = tile_index.expect("Error! tile_index is needed for array factor beam forming");
-        // let index = tile_index.unwrap_or(0 as usize); // Uncomment this for debugging, lets
-        // program run all the way through
-
         // Feed angles, euler angles, azimutal angles from x to y, N of E. Two elements [x, y]
         let phi_pq: &Vec<f64> = &self.feed_angles_rad[index];
-
-        // get element coordinates and transformation matrix for station 'index'
-        // NOTE: OSKAR saves element offsets in ECEF coordinates, we need to transform back to
-        // local enu coordinates. Fortunately, OSKAR saves the *transpose* of the local to ecef
-        // transformation matrix, so we can just multiply the coordinates by the saved matrix.
-        let coordinates: &Array2<f64> = &self.feed_coordinates[index];
-        let ecef_to_local_mat: &Array2<f64> = &self.ecef_to_local_mats[index];
-
-        // Transform the coordinates
-        let transformed_coordinates = coordinates.dot(ecef_to_local_mat);
-        let num_elems = coordinates.nrows();
 
         // Convert frequency to wavelength
         let lambda = SPEED_OF_LIGHT / freq_hz;
@@ -100,25 +85,47 @@ impl SkaArrayFactorMeanBeam {
         //    It describes the array's whole x-dipole response to a signal coming from (l, m)
         //    NOTE: But how does it know to describe the response to (x, y) or (theta, phi)
         //    components of the electric field?
-        let mut array_factor = Complex::from(0.0);
+        let mut array_factor_mean = Complex::from(0.0);
 
-        for i in 0..num_elems {
-            let x_loc = transformed_coordinates[[i, 0]];
-            let y_loc = transformed_coordinates[[i, 1]];
-            assert!(
-                transformed_coordinates[[i, 2]].abs() < 1e-10,
-                "z-coordinate of station coordinates is not close to 0"
-            );
+        let num_stations = self.feed_coordinates.len();
 
-            // Add up phases
-            let tot_phase =
-                (x_loc / lambda * (beam_l - cent_l) + y_loc / lambda * (beam_m - cent_m));
-            let angle = -2.0 * PI * tot_phase;
-            array_factor += Complex::from_polar(1.0, angle);
+        for j in 0..num_stations {
+            let mut array_factor_station = Complex::from(0.0);
+            // get element coordinates and transformation matrix for station 'index'
+            // NOTE: OSKAR saves element offsets in ECEF coordinates, we need to transform back to
+            // local enu coordinates. Fortunately, OSKAR saves the *transpose* of the local to ecef
+            // transformation matrix, so we can just multiply the coordinates by the saved matrix.
+            let coordinates: &Array2<f64> = &self.feed_coordinates[j];
+            let ecef_to_local_mat: &Array2<f64> = &self.ecef_to_local_mats[j];
+            let num_elems = coordinates.len();
+
+            for i in 0..num_elems {
+                // Transform the coordinates
+                let transformed_coordinates = coordinates.dot(ecef_to_local_mat);
+                let num_elems = coordinates.nrows();
+
+                let x_loc = transformed_coordinates[[i, 0]];
+                let y_loc = transformed_coordinates[[i, 1]];
+                assert!(
+                    transformed_coordinates[[i, 2]].abs() < 1e-10,
+                    "z-coordinate of station coordinates is not close to 0: {:?}",
+                    transformed_coordinates[[i, 2]].abs()
+                );
+
+                // Add up phases
+                let tot_phase =
+                    (x_loc / lambda * (beam_l - cent_l) + y_loc / lambda * (beam_m - cent_m));
+                let angle = -2.0 * PI * tot_phase;
+                array_factor_station += Complex::from_polar(1.0, angle);
+            }
+
+            // Normalise complex Array Factor
+            let af_norm = array_factor / num_elems as f64;
+
+            array_factor_mean += array_factor_station;
         }
 
-        // Normalise complex Array Factor
-        let af_norm = array_factor / num_elems as f64;
+        array_factor_mean /= num_stations;
 
         // 1.1 Embedded Element Pattern for crossed dipoles
         // This is assuming the dipoles are aligned with the x and y axis. i.e. NO ROTATION!

@@ -20,7 +20,9 @@ mod tests;
 
 pub(crate) use error::BeamError;
 pub(crate) use fee::FEEBeam;
-pub(crate) use ska::{SkaAiryBeam, SkaArrayFactorBeam, SkaBeamParams, SkaGaussianBeam};
+pub(crate) use ska::{
+    SkaAiryBeam, SkaArrayFactorBeam, SkaArrayFactorMeanBeam, SkaBeamParams, SkaGaussianBeam,
+};
 
 use std::{path::Path, str::FromStr};
 
@@ -68,6 +70,9 @@ pub enum BeamType {
 
     #[strum(serialize = "ska_array_factor")]
     SkaArrayFactor,
+
+    #[strum(serialize = "ska_array_factor_mean")]
+    SkaArrayFactorMean,
 }
 
 impl Default for BeamType {

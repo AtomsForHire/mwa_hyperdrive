@@ -9,10 +9,12 @@
 
 mod airy;
 mod array_factor;
+mod array_factor_mean;
 mod gaussian;
 
 pub(crate) use airy::SkaAiryBeam;
 pub(crate) use array_factor::SkaArrayFactorBeam;
+pub(crate) use array_factor_mean::SkaArrayFactorMeanBeam;
 pub(crate) use gaussian::SkaGaussianBeam;
 
 use std::f64::consts::FRAC_PI_6;

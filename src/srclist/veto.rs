@@ -108,7 +108,7 @@ pub(crate) fn veto_sources(
                         Some(0), // TODO: At the moment veto-ing sky sources based solely on the
                         // 0th station beam response on the sky!
                         match adjusted_beam.get_beam_type() {
-                            BeamType::SkaAiry | BeamType::SkaGaussian | BeamType::SkaArrayFactor => lst_rad,
+                            BeamType::SkaAiry | BeamType::SkaGaussian | BeamType::SkaArrayFactor | BeamType::SkaArrayFactorMean => lst_rad,
                             _ => array_latitude_rad
                             }) {
                             Ok(j) => j,
