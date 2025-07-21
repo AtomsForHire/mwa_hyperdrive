@@ -541,13 +541,24 @@ impl VisSimulateSkaArgs {
             ecef_to_local_mats: context.ecef_to_local_mats.clone(),
         };
 
-        let beam = beam_args.parse(
+        // Use this beam to decide what to veto
+        let veto_beam_before_processing = beam_args.clone().parse(
             num_tiles,
             context.dipole_delays.clone(),
             context.dipole_gains.clone(),
             Some(context.input_data_type),
-            Some(ska_beam_params),
+            Some(ska_beam_params.clone()),
         )?;
+
+        // Use this beam to return
+        let beam = beam_args.clone().parse(
+            num_tiles,
+            context.dipole_delays.clone(),
+            context.dipole_gains.clone(),
+            Some(context.input_data_type),
+            Some(ska_beam_params.clone()),
+        )?;
+
         let modelling_params = modelling_args.parse();
 
         // Veto with the mean beam
@@ -571,7 +582,7 @@ impl VisSimulateSkaArgs {
 
                 veto_beam
             }
-            _ => beam,
+            _ => veto_beam_before_processing,
         };
 
         let source_list = srclist_args.parse(
