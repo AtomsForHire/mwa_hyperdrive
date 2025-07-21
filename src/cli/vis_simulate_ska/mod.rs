@@ -27,13 +27,13 @@ use super::common::{
     ARRAY_POSITION_HELP,
 };
 use crate::{
-    beam::Delays,
-    beam::SkaBeamParams,
-    cli::common::InfoPrinter,
-    cli::vis_simulate::VisSimulateArgsError,
+    beam::{BeamType, Delays, SkaBeamParams},
+    cli::{common::InfoPrinter, vis_simulate::VisSimulateArgsError},
     context::ObsContext,
-    io::read::{MsReader, VisRead},
-    io::write::VIS_OUTPUT_EXTENSIONS,
+    io::{
+        read::{MsReader, VisRead},
+        write::VIS_OUTPUT_EXTENSIONS,
+    },
     math::TileBaselineFlags,
     metafits::{get_dipole_delays, get_dipole_gains},
     params::{VisSimulateError, VisSimulateSkaParams},
@@ -541,7 +541,6 @@ impl VisSimulateSkaArgs {
             ecef_to_local_mats: context.ecef_to_local_mats.clone(),
         };
 
-        // TODO: Need to read in obs context from sim.ms
         let beam = beam_args.parse(
             num_tiles,
             context.dipole_delays.clone(),
@@ -551,12 +550,35 @@ impl VisSimulateSkaArgs {
         )?;
         let modelling_params = modelling_args.parse();
 
+        // Veto with the mean beam
+        let veto_beam: Box<dyn Beam> = match beam_args.beam_type {
+            BeamType::SkaArrayFactor => {
+                BeamArgs {
+                    beam_type: "ska_array_factor_mean",
+                    no_beam: false,
+                    delays: None,
+                    unity_dipole_gains: false,
+                    beam_file: None,
+                };
+
+                let veto_beam = veto_beam_args.parse(
+                    num_tiles,
+                    context.dipole_delays.clone(),
+                    context.dipole_gains,
+                    Some(context.input_data_type),
+                    Some(ska_beam_params),
+                );
+                return veto_beam;
+            }
+            _ => beam,
+        };
+
         let source_list = srclist_args.parse(
             phase_centre,
             lst_rad,
             latitude_rad,
             &coarse_chan_freqs,
-            &*beam,
+            &*veto_beam,
         )?;
 
         // Apply any filters.

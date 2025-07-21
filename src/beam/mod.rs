@@ -20,7 +20,9 @@ mod tests;
 
 pub(crate) use error::BeamError;
 pub(crate) use fee::FEEBeam;
-pub(crate) use ska::{SkaAiryBeam, SkaArrayFactorBeam, SkaBeamParams, SkaGaussianBeam};
+pub(crate) use ska::{
+    SkaAiryBeam, SkaArrayFactorBeam, SkaArrayFactorMeanBeam, SkaBeamParams, SkaGaussianBeam,
+};
 
 use std::{path::Path, str::FromStr};
 
@@ -68,6 +70,9 @@ pub enum BeamType {
 
     #[strum(serialize = "ska_array_factor")]
     SkaArrayFactor,
+
+    #[strum(serialize = "ska_array_factor_mean")]
+    SkaArrayFactorMean,
 }
 
 impl Default for BeamType {
@@ -515,6 +520,33 @@ pub fn create_beam_object(
                 ecef_to_local_mats: Some(ecef_to_local_mats),
             };
             Ok(Box::new(SkaArrayFactorBeam::new(default_ska_params)))
+        }
+        BeamType::SkaArrayFactorMean => {
+            debug!(
+                "Setting up a SkaArrayFactorMean object via create_beam_object using default SKA params"
+            );
+            // Populate some default values so I can plot the beam response
+            let mut feed_angles_rad: Vec<Vec<f64>> = vec![];
+            for i in 0..256 {
+                feed_angles_rad.push(vec![0.0, PI / 2.0]);
+            }
+
+            let feed_coordinates: Vec<Array2<f64>> = vec![get_s8_1()];
+            let ecef_to_local_mats: Vec<Array2<f64>> =
+                vec![array![[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0],]]; // Usually the
+                                                                                  // code transform from ecef to local, but since I'm hardcoding local here I don't need
+                                                                                  // to transform.
+
+            let default_ska_params = SkaBeamParams {
+                phase_centre: DEFAULT_SKA_PHASE_CENTRE,
+                ska_site_latitude_rad: DEFAULT_SKA_SITE_LATITUDE_RAD,
+                reference_frequency_hz: DEFAULT_SKA_REF_FREQ_HZ,
+                number_of_stations: num_tiles, // Use num_tiles argument for number_of_stations
+                feed_angles_rad: Some(feed_angles_rad),
+                feed_coordinates: Some(feed_coordinates),
+                ecef_to_local_mats: Some(ecef_to_local_mats),
+            };
+            Ok(Box::new(SkaArrayFactorMeanBeam::new(default_ska_params)))
         }
     }
 }
