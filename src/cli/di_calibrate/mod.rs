@@ -314,7 +314,8 @@ impl DiCalArgs {
                     Some(obs_context.input_data_type),
                     Some(ska_beam_params),
                 )?;
-                return veto_beam;
+
+                veto_beam
             }
             _ => beam,
         };
