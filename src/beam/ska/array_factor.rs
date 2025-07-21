@@ -107,7 +107,8 @@ impl SkaArrayFactorBeam {
             let y_loc = transformed_coordinates[[i, 1]];
             assert!(
                 transformed_coordinates[[i, 2]].abs() < 1e-10,
-                "z-coordinate of station coordinates is not close to 0"
+                "z-coordinate of station coordinates is not close to 0: {:?}",
+                transformed_coordinates[[i, 2]].abs()
             );
 
             // Add up phases
