@@ -47,11 +47,17 @@ pub(crate) fn veto_sources(
     lst_rad: f64,
     array_latitude_rad: f64,
     freqs_hz: &[f64],
-    beam: &dyn Beam,
+    adjusted_beam: &dyn Beam,
     num_sources: Option<usize>,
     source_dist_cutoff_deg: f64,
     veto_threshold: f64,
 ) -> Result<(), ReadSourceListError> {
+    // If we are using an SkaArrayFactor beam, try veto by using the mean beam
+    let adjusted_beam = match adjusted_beam.get_beam_type() {
+        BeamType::SkaArrayFactor => {} // If using array factor beam, turn into SkaArrayFactorMean
+        _ => adjusted_beam,            // If not using array factor beam, continue with input beam
+    };
+
     let dist_cutoff = source_dist_cutoff_deg.to_radians();
 
     // TODO: This step is relatively expensive!
@@ -96,12 +102,12 @@ pub(crate) fn veto_sources(
                 for (comp, azel) in source.components.iter().zip(azels.iter()) {
                     // Get the beam response at this source position and
                     // frequency.
-                    let j = match beam.calc_jones(
+                    let j = match adjusted_beam.calc_jones(
                         *azel,
                         cc_freq,
                         Some(0), // TODO: At the moment veto-ing sky sources based solely on the
                         // 0th station beam response on the sky!
-                        match beam.get_beam_type() {
+                        match adjusted_beam.get_beam_type() {
                             BeamType::SkaAiry | BeamType::SkaGaussian | BeamType::SkaArrayFactor => lst_rad,
                             _ => array_latitude_rad
                             }) {
