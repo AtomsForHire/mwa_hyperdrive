@@ -296,12 +296,35 @@ impl DiCalArgs {
             Some(ska_beam_params.clone()),
         )?;
 
+        // Veto with the mean beam
+        let veto_beam: Box<dyn Beam> = match beam_args.beam_type {
+            BeamType::SkaArrayFactor => {
+                let veto_beam_args = BeamArgs {
+                    beam_type: "ska_array_factor_mean",
+                    no_beam: false,
+                    delays: None,
+                    unity_dipole_gains: false,
+                    beam_file: None,
+                };
+
+                let veto_beam = veto_beam_args.parse(
+                    num_tiles,
+                    context.dipole_delays.clone(),
+                    context.dipole_gains,
+                    Some(context.input_data_type),
+                    Some(ska_beam_params),
+                );
+                return veto_beam;
+            }
+            _ => beam,
+        };
+
         let source_list = srclist_args.parse(
             obs_context.phase_centre,
             lst_rad,
             latitude_rad,
             &obs_context.get_veto_freqs(),
-            &*beam,
+            &*veto_beam,
         )?;
 
         // Set up the calibration timeblocks.
