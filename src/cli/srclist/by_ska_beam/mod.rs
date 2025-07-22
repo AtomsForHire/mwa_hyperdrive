@@ -411,30 +411,3 @@ fn by_ska_beam(
 
     Ok(())
 }
-
-#[derive(thiserror::Error, Debug)]
-pub(crate) enum SrclistByBeamError {
-    #[error("No metafits was supplied and no phase centre was specified; cannot continue")]
-    NoPhaseCentre,
-
-    #[error("No metafits was supplied and no LST was specified; cannot continue")]
-    NoLst,
-
-    #[error("No metafits was supplied and no frequencies were specified; cannot continue")]
-    NoFreqs,
-
-    #[error(transparent)]
-    ReadSourceList(#[from] ReadSourceListError),
-
-    #[error(transparent)]
-    WriteSourceList(#[from] WriteSourceListError),
-
-    #[error(transparent)]
-    Beam(#[from] crate::beam::BeamError),
-
-    #[error(transparent)]
-    Mwalib(#[from] mwalib::MwalibError),
-
-    #[error(transparent)]
-    IO(#[from] std::io::Error),
-}
