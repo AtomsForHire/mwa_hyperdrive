@@ -285,7 +285,11 @@ fn by_ska_beam(
             phase_centre: obs_context.phase_centre,
             array_position: obs_context.array_position,
             lst_rad: lst_rad_from_ms,
-            freqs_hz: obs_context.fine_chan_freqs.iter().collect(),
+            freqs_hz: obs_context
+                .fine_chan_freqs
+                .iter()
+                .map(|&f| f as _)
+                .collect(),
             dipole_delays: None,
         };
 
