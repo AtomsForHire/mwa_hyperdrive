@@ -259,7 +259,7 @@ fn by_ska_beam(
         phase_centre: RADec::from_radians(0.0, 0.0),
         ska_site_latitude_rad: 0.0,
         reference_frequency_hz: 0.0,
-        number_of_stations: 0.0,
+        number_of_stations: 0,
         feed_angles_rad: None,
         feed_coordinates: None,
         ecef_to_local_mats: None,
