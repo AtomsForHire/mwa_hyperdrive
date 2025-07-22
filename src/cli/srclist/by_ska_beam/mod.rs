@@ -257,7 +257,9 @@ fn by_ska_beam(
         // Open the metafits.
         trace!("Attempting to open the metafits file");
         // let metafits = mwalib::MetafitsContext::new(metafits, None)?;
-        let ms_reader = io::read::MsReader::new(metafits, None, None, None)?;
+        let ms_reader = io::read::MsReader::new(metafits.to_path_buf(), None, None, None)
+            .map_err(|e| SrclistByBeamError::Mwalib(e.to_string()))?;
+
         let obs_context = ms_reader.get_obs_context();
 
         let precession_info = precess_time(
@@ -265,17 +267,19 @@ fn by_ska_beam(
             obs_context.array_position.latitude_rad,
             obs_context.phase_centre,
             obs_context.timestamps[0],
-            obs_context.dut1,
+            obs_context
+                .dut1
+                .expect("Could not unwrap dut1 in srclist-by-beam-ska"),
         );
 
         // Let's just not apply precession for all SKA stuff
-        let lst_rad = precession_info.lmst;
+        let lst_rad_from_ms = precession_info.lmst;
 
         let mut metadata = Metadata {
             phase_centre: obs_context.phase_centre,
             array_position: obs_context.array_position,
-            lst_rad,
-            freqs_hz: obs_context.fine_chan_freqs,
+            lst_rad: lst_rad_from_ms,
+            freqs_hz: obs_context.fine_chan_freqs.iter().collect(),
             dipole_delays: None,
         };
 
