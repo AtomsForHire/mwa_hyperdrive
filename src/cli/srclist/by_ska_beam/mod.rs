@@ -16,6 +16,7 @@ use std::{
 
 use super::SrclistByBeamError;
 use clap::Parser;
+use hifitime::Duration;
 use itertools::Itertools;
 use log::{debug, info, trace};
 use marlu::{
@@ -273,9 +274,7 @@ fn by_ska_beam(
             obs_context.array_position.latitude_rad,
             obs_context.phase_centre,
             obs_context.timestamps[0],
-            obs_context
-                .dut1
-                .expect("Could not unwrap dut1 in srclist-by-beam-ska"),
+            obs_context.dut1.unwrap_or(Duration::ZERO),
         );
 
         // Let's just not apply precession for all SKA stuff
