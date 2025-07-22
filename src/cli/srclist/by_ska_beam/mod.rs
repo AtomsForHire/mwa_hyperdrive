@@ -9,6 +9,7 @@ mod tests;
 
 use std::{
     borrow::Cow,
+    io::ErrorKind,
     path::{Path, PathBuf},
     str::FromStr,
 };
@@ -257,8 +258,13 @@ fn by_ska_beam(
         // Open the metafits.
         trace!("Attempting to open the metafits file");
         // let metafits = mwalib::MetafitsContext::new(metafits, None)?;
-        let ms_reader = io::read::MsReader::new(metafits.to_path_buf(), None, None, None)
-            .map_err(|e| SrclistByBeamError::Mwalib(e.to_string()))?;
+        let ms_reader =
+            io::read::MsReader::new(metafits.to_path_buf(), None, None, None).map_err(|e| {
+                SrclistByBeamError::IO(std::io::Error::new(
+                    ErrorKind::Other,
+                    "Unable to read in OSKAR ms",
+                ))
+            })?;
 
         let obs_context = ms_reader.get_obs_context();
 
