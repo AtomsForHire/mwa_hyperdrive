@@ -17,7 +17,10 @@ use super::SrclistByBeamError;
 use clap::Parser;
 use itertools::Itertools;
 use log::{debug, info, trace};
-use marlu::{LatLngHeight, RADec};
+use marlu::{
+    precession::{self, get_lmst, precess_time},
+    LatLngHeight, RADec,
+};
 
 use crate::{
     beam::Delays,
@@ -26,6 +29,7 @@ use crate::{
         SOURCE_LIST_INPUT_TYPE_HELP, SOURCE_LIST_OUTPUT_TYPE_HELP, VETO_THRESHOLD_HELP,
     },
     constants::{DEFAULT_CUTOFF_DISTANCE, DEFAULT_VETO_THRESHOLD},
+    io::{self, read::VisRead},
     metafits::get_dipole_delays,
     srclist::{
         read::read_source_list_file, veto_sources, write_source_list, ReadSourceListError,
@@ -252,31 +256,27 @@ fn by_ska_beam(
     let metadata = if let Some(metafits) = metafits {
         // Open the metafits.
         trace!("Attempting to open the metafits file");
-        let metafits = mwalib::MetafitsContext::new(metafits, None)?;
+        // let metafits = mwalib::MetafitsContext::new(metafits, None)?;
+        let ms_reader = io::read::MsReader::new(metafits, None, None, None)?;
+        let obs_context = ms_reader.get_obs_context();
 
-        let dipole_delays = {
-            let d = Delays::Full(get_dipole_delays(&metafits));
-            let ideal = d.get_ideal_delays();
-            Delays::Partial(ideal.to_vec())
-        };
+        let precession_info = precess_time(
+            obs_context.array_position.longitude_rad,
+            obs_context.array_position.latitude_rad,
+            obs_context.phase_centre,
+            obs_context.timestamps[0],
+            obs_context.dut1,
+        );
+
+        // Let's just not apply precession for all SKA stuff
+        let lst_rad = precession_info.lmst;
 
         let mut metadata = Metadata {
-            phase_centre: RADec::from_degrees(
-                metafits
-                    .ra_phase_center_degrees
-                    .unwrap_or(metafits.ra_tile_pointing_degrees),
-                metafits
-                    .dec_phase_center_degrees
-                    .unwrap_or(metafits.dec_tile_pointing_degrees),
-            ),
-            array_position: LatLngHeight::mwa(),
-            lst_rad: metafits.lst_rad,
-            freqs_hz: metafits
-                .metafits_coarse_chans
-                .iter()
-                .map(|cc| cc.chan_centre_hz as _)
-                .collect(),
-            dipole_delays: Some(dipole_delays),
+            phase_centre: obs_context.phase_centre,
+            array_position: obs_context.array_position,
+            lst_rad,
+            freqs_hz: obs_context.fine_chan_freqs,
+            dipole_delays: None,
         };
 
         // Override metafits values with anything that was manually specified.
@@ -334,6 +334,7 @@ fn by_ska_beam(
     // don't want to use any dead dipoles.
     info!("");
     let beam = beam_args.parse(1, metadata.dipole_delays, None, None, None)?;
+    println!("Using {:?} in vis-simulate-ska", beam.get_beam_type());
 
     // Apply any filters.
     let mut sl = if filter_points || filter_gaussians || filter_shapelets {
