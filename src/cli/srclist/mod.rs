@@ -5,11 +5,13 @@
 //! Utilities surrounding source lists.
 
 mod by_beam;
+mod by_ska_beam;
 mod convert;
 mod shift;
 mod verify;
 
 pub(super) use by_beam::{SrclistByBeamArgs, SrclistByBeamError};
+pub(super) use by_ska_beam::SrclistBySkaBeamArgs;
 pub(super) use convert::SrclistConvertArgs;
 pub(super) use shift::SrclistShiftArgs;
 pub(super) use verify::SrclistVerifyArgs;

@@ -131,6 +131,8 @@ https://mwatelescope.github.io/mwa_hyperdrive/user/plotting.html"#
 
     SrclistByBeam(srclist::SrclistByBeamArgs),
 
+    SrclistBySkaBeam(srclist::SrclistBySkaBeamArgs),
+
     SrclistConvert(srclist::SrclistConvertArgs),
 
     SrclistVerify(srclist::SrclistVerifyArgs),
@@ -175,6 +177,7 @@ impl Hyperdrive {
             Command::SolutionsConvert(_) => "solutions-convert",
             Command::SolutionsPlot(_) => "solutions-plot",
             Command::SrclistByBeam(_) => "srclist-by-beam",
+            Command::SrclistBySkaBeam(_) => "srclist-by-beam-ska",
             Command::SrclistConvert(_) => "srclist-convert",
             Command::SrclistShift(_) => "srclist-shift",
             Command::SrclistVerify(_) => "srclist-verify",
