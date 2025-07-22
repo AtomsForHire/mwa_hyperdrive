@@ -25,7 +25,7 @@ use marlu::{
 };
 
 use crate::{
-    beam::Delays,
+    beam::{Delays, SkaBeamParams},
     cli::common::{
         display_warnings, BeamArgs, Warn, ARRAY_POSITION_HELP, SOURCE_DIST_CUTOFF_HELP,
         SOURCE_LIST_INPUT_TYPE_HELP, SOURCE_LIST_OUTPUT_TYPE_HELP, VETO_THRESHOLD_HELP,
@@ -255,6 +255,7 @@ fn by_ska_beam(
         }
     };
 
+    let ska_beam_params: SkaBeamParams;
     let metadata = if let Some(metafits) = metafits {
         // Open the metafits.
         trace!("Attempting to open the metafits file");
@@ -268,6 +269,22 @@ fn by_ska_beam(
             })?;
 
         let obs_context = ms_reader.get_obs_context();
+        let freq_centroid = obs_context
+            .fine_chan_freqs
+            .iter()
+            .map(|&u| u as f64)
+            .sum::<f64>()
+            / obs_context.fine_chan_freqs.len() as f64;
+
+        ska_beam_params = SkaBeamParams {
+            phase_centre: obs_context.phase_centre,
+            ska_site_latitude_rad: obs_context.array_position.latitude_rad,
+            reference_frequency_hz: freq_centroid,
+            number_of_stations: obs_context.get_total_num_tiles(),
+            feed_angles_rad: obs_context.feed_angles.clone(),
+            feed_coordinates: obs_context.feed_coordindates.clone(),
+            ecef_to_local_mats: obs_context.ecef_to_local_mats.clone(),
+        };
 
         let precession_info = precess_time(
             obs_context.array_position.longitude_rad,
@@ -346,7 +363,7 @@ fn by_ska_beam(
     // Set up the beam. We use the ideal delays for all tiles because we
     // don't want to use any dead dipoles.
     info!("");
-    let beam = beam_args.parse(1, metadata.dipole_delays, None, None, None)?;
+    let beam = beam_args.parse(1, metadata.dipole_delays, None, None, Some(ska_beam_params))?;
     println!("Using {:?} in vis-simulate-ska", beam.get_beam_type());
 
     // Apply any filters.
