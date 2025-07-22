@@ -240,6 +240,7 @@ impl Hyperdrive {
 
             // Source list utilities.
             Command::SrclistByBeam(args) => args.run()?,
+            Command::SrclistBySkaBeam(args) => args.run()?,
             Command::SrclistConvert(args) => args.run()?,
             Command::SrclistShift(args) => args.run()?,
             Command::SrclistVerify(args) => args.run()?,
