@@ -372,7 +372,7 @@ fn by_ska_beam(
     // don't want to use any dead dipoles.
     info!("");
     let beam = beam_args.parse(1, metadata.dipole_delays, None, None, Some(ska_beam_params))?;
-    println!("Using {:?} in vis-simulate-ska", beam.get_beam_type());
+    println!("Using {:?} in srclist-by-beam-ska", beam.get_beam_type());
 
     // Apply any filters.
     let mut sl = if filter_points || filter_gaussians || filter_shapelets {
