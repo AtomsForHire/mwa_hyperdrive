@@ -61,7 +61,7 @@ pub struct BeamArgs {
     output: PathBuf,
 
     /// Station number
-    #[clap(long, default_value = 0)]
+    #[clap(long, default_value = "0")]
     station: usize,
 
     /// Use a GPU (i.e. CUDA or HIP) to generate the beam responses.
@@ -136,7 +136,7 @@ fn calc_cpu(args: &BeamArgs) -> Result<(), HyperdriveError> {
     let jones = beam.calc_jones_array(
         &azels,
         freq_mhz * 1e6,
-        Some(station),
+        Some(*station),
         latitude_deg.to_radians(),
     )?; // putting
         // tile_index = some(0) here, not sure if this is supposed to be some generic utility function.
