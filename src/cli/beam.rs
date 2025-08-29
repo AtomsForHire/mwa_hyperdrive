@@ -60,6 +60,10 @@ pub struct BeamArgs {
     #[clap(short, long, default_value = "beam_responses.tsv")]
     output: PathBuf,
 
+    /// Station number
+    #[clap(long, default_value = 0)]
+    station: i32,
+
     /// Use a GPU (i.e. CUDA or HIP) to generate the beam responses.
     #[cfg(any(feature = "cuda", feature = "hip"))]
     #[clap(short, long)]
@@ -109,6 +113,7 @@ fn calc_cpu(args: &BeamArgs) -> Result<(), HyperdriveError> {
         max_za,
         step,
         output,
+        station,
         #[cfg(any(feature = "cuda", feature = "hip"))]
             gpu: _,
     } = args;
@@ -120,18 +125,22 @@ fn calc_cpu(args: &BeamArgs) -> Result<(), HyperdriveError> {
     )?;
     // Write out total + separate x, y components
     let mut out = BufWriter::new(File::create(output)?);
-    let mut out_00 = BufWriter::new(File::create("beam_responses_00.tsv")?);
-    let mut out_01 = BufWriter::new(File::create("beam_responses_01.tsv")?);
-    let mut out_10 = BufWriter::new(File::create("beam_responses_10.tsv")?);
-    let mut out_11 = BufWriter::new(File::create("beam_responses_11.tsv")?);
+    let mut out_00 = BufWriter::new(File::create(format!("beam_responses_00_{station}.tsv"))?);
+    let mut out_01 = BufWriter::new(File::create(format!("beam_responses_01_{station}.tsv"))?);
+    let mut out_10 = BufWriter::new(File::create(format!("beam_responses_10_{station}.tsv"))?);
+    let mut out_11 = BufWriter::new(File::create(format!("beam_responses_11_{station}.tsv"))?);
 
     let azels: Vec<_> = gen_azzas(max_za.to_radians(), step.to_radians())
         .map(|(az, za)| AzEl::from_radians(az, FRAC_PI_2 - za))
         .collect();
-    let jones =
-        beam.calc_jones_array(&azels, freq_mhz * 1e6, Some(0), latitude_deg.to_radians())?; // putting
-                                                                                            // tile_index = some(0) here, not sure if this is supposed to be some generic utility function.
-                                                                                            // seems like it
+    let jones = beam.calc_jones_array(
+        &azels,
+        freq_mhz * 1e6,
+        Some(station),
+        latitude_deg.to_radians(),
+    )?; // putting
+        // tile_index = some(0) here, not sure if this is supposed to be some generic utility function.
+        // seems like it
     for (j, azel) in jones.into_iter().zip(azels) {
         writeln!(
             &mut out,
