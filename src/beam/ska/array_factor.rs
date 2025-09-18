@@ -135,13 +135,16 @@ impl SkaArrayFactorBeam {
         let denom_p = self.calc_half_wavelength_dipole_denom(theta, phi_p);
         let denom_q = self.calc_half_wavelength_dipole_denom(theta, phi_q);
 
-        let kl: f64 = PI / 2.0; // By default OSKAR uses a dipole length of 0.5 wavelengths, so
-                                // the expression for kL simplifies to pi/2.0
+        // let kl: f64 = PI / 2.0; // By default OSKAR uses a dipole length of 0.5 wavelengths, so
+        //                         // the expression for kL simplifies to pi/2.0
+        let dipole_length = 0.5; // Default dipole length used in OSKAR
+        let kl: f64 = dipole_length * PI * (freq_hz / SPEED_OF_LIGHT);
         let numer_p = (kl * phi_p.cos() * theta.sin()).cos() - kl.cos();
         let numer_q = (kl * (phi_q).cos() * theta.sin()).cos() - kl.cos();
 
         let e_p_theta = (-phi_p.cos() * theta.cos() * numer_p) / denom_p * af_norm;
         let e_p_phi = (phi_p.sin() * numer_p) / denom_p * af_norm;
+
         let e_q_theta = (-(phi_q).cos() * theta.cos() * numer_q) / denom_q * af_norm;
         let e_q_phi = ((phi_q).sin() * numer_q) / denom_q * af_norm;
 
