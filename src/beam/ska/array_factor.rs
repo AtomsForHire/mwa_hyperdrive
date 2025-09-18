@@ -113,7 +113,7 @@ impl SkaArrayFactorBeam {
 
             // Add up phases
             let tot_phase =
-                (x_loc / lambda * (beam_l - cent_l) + y_loc / lambda * (beam_m - cent_m));
+                (-x_loc / lambda * (beam_l - cent_l) + y_loc / lambda * (beam_m - cent_m));
             let angle = -2.0 * PI * tot_phase;
             array_factor += Complex::from_polar(1.0, angle);
         }
