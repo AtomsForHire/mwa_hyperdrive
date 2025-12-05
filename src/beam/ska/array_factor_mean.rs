@@ -141,7 +141,11 @@ impl SkaArrayFactorMeanBeam {
         let denom_q = self.calc_half_wavelength_dipole_denom(theta, phi_q);
 
         let dipole_length: f64 = 0.5; // Default OSKAR dipole length in units of wavelength
-        let kl: f64 = dipole_length * PI * freq_hz / SPEED_OF_LIGHT;
+        let dipole_length_m: f64 = dipole_length * SPEED_OF_LIGHT / freq_hz;
+        let kl: f64 = dipole_length_m * PI * freq_hz / SPEED_OF_LIGHT; // Yes, for a default value
+                                                                       // of 0.5 wavelengths, this should reduce to kL = pi/2. However, this is setting up for a
+                                                                       // future where we might read in a different dipole length value.
+
         let numer_p = (kl * phi_p.cos() * theta.sin()).cos() - kl.cos();
         let numer_q = (kl * (phi_q).cos() * theta.sin()).cos() - kl.cos();
 
