@@ -135,10 +135,11 @@ impl SkaArrayFactorBeam {
         let denom_p = self.calc_half_wavelength_dipole_denom(theta, phi_p);
         let denom_q = self.calc_half_wavelength_dipole_denom(theta, phi_q);
 
-        // let kl: f64 = PI / 2.0; // By default OSKAR uses a dipole length of 0.5 wavelengths, so
-        //                         // the expression for kL simplifies to pi/2.0
-        let dipole_length = 0.5; // Default dipole length used in OSKAR
-        let kl: f64 = dipole_length * PI * (freq_hz / SPEED_OF_LIGHT);
+        let kl: f64 = PI / 2.0; // By default OSKAR uses a dipole length of 0.5 wavelengths, so
+                                // the expression for kL simplifies to pi/2.0
+
+        //let dipole_length = 0.5; // Default dipole length used in OSKAR
+        //let kl: f64 = dipole_length * PI * (freq_hz / SPEED_OF_LIGHT);
         let numer_p = (kl * phi_p.cos() * theta.sin()).cos() - kl.cos();
         let numer_q = (kl * (phi_q).cos() * theta.sin()).cos() - kl.cos();
 
@@ -153,27 +154,7 @@ impl SkaArrayFactorBeam {
         // 1. Construct Jones matrix 'B'
         let b = Jones::from([e_p_theta, e_p_phi, e_q_theta, e_q_phi]);
 
-        // 2. Apply Parallactic angle correction according to the Hyperbeam doc
-        // BUG: Which is the correct way to do it? OSKAR, Hyperbeam or WODEN?
-        let obs_lat = self.ska_site_latitude_rad;
-        let ha = hadec.ha;
-        let dec = hadec.dec;
-        let psi = (obs_lat.cos() * ha.sin())
-            .atan2((obs_lat.sin() * dec.cos() - obs_lat.cos() * dec.sin() * ha.cos()));
-
-        let rot_mat = Jones::from([
-            -(psi.sin()),
-            0.0,
-            psi.cos(),
-            0.0,
-            psi.cos(),
-            0.0,
-            psi.sin(),
-            0.0,
-        ]);
-        let bp = b * rot_mat;
-
-        return bp;
+        return b;
     }
 
     /// Calculate the denominator that is common to both E_phi and E_theta components, when using a
