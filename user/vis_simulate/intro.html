@@ -161,12 +161,10 @@
                     <main>
                         <h1 id="simulate-visibilities"><a class="header" href="#simulate-visibilities">Simulate visibilities</a></h1>
 <p><code>vis-simulate</code> effectively turns a sky-model source list into visibilities.</p>
-<div id="admonition-simple-example" class="admonition admonish-info" role="note" aria-labelledby="admonition-simple-example-title">
+<div id="admonition-simple-example" class="admonition admonish-info">
 <div class="admonition-title">
-<div id="admonition-simple-example-title">
 <p>Simple example</p>
-</div>
-<a class="admonition-anchor-link" href="#admonition-simple-example"></a>
+<p><a class="admonition-anchor-link" href="#admonition-simple-example"></a></p>
 </div>
 <div>
 <pre><code class="language-shell">hyperdrive vis-simulate \
@@ -203,6 +201,14 @@ MWA coarse channels.</li>
 it's up to the caller to handle this if they want to.</p>
 <p>The frequencies to use for beam calculations are the coarse channel centers,
 1.28 MHz apart on MWA.</p>
+<h3 id="auto-correlations"><a class="header" href="#auto-correlations">Auto-correlations</a></h3>
+<p>By default, visibilities exclude auto-correlations when simulated. To include auto-correlations, use:</p>
+<pre><code class="language-shell">hyperdrive vis-simulate \
+  -s srclist.yaml \
+  -m *.metafits \
+  --output-autos
+</code></pre>
+<p>Including autos can increase file size; only enable them if needed.</p>
 
                     </main>
 
