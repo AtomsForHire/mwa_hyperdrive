@@ -1069,10 +1069,13 @@ impl MsReader {
 
                 // Read this row if the baseline is unflagged.
                 if let Some(crosses) = crosses.as_mut() {
+                    let baseline_key = (ant1, ant2);
+                    let baseline_key_reverse = (ant2, ant1);
                     if let Some(bl) = crosses
                         .tile_baseline_flags
                         .tile_to_unflagged_cross_baseline_map
-                        .get(&(ant1, ant2))
+                        .get(&baseline_key)
+                        .or_else(|| crosses.tile_baseline_flags.tile_to_unflagged_cross_baseline_map.get(&&baseline_key_reverse))
                         .copied()
                     {
                         // The data array is arranged [frequency][instrumental_pol].
@@ -1095,7 +1098,12 @@ impl MsReader {
                                     .collect()
                             } else {
                                 // One weight per frequency.
-                                row.get_cell(self.weight_col_name)?
+                                let weights: Vec<f32> = row.get_cell(self.weight_col_name)?;
+                                let mut expanded_weights: Vec<f32> = Vec::with_capacity(ms_data.len_of(Axis(0)));
+                                for _ in 0..ms_data.len_of(Axis(0)){
+                                    expanded_weights.extend_from_slice(&weights);
+                                }
+                                expanded_weights
                             }
                         };
                         // The flag array is arranged
