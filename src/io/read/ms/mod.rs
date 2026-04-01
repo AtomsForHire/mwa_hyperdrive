@@ -928,6 +928,61 @@ impl MsReader {
             }
         };
 
+        // FEED and PHASED_ARRAY tables were not previously read in this function, hence I assume
+        // they may not be standard tables in MWA measurement sets. Only get these values if these
+        // tables exist.
+        // Read in feed angle. By default OSKAR saves only one feed angle per station in an [X Y]
+        // array
+        let feed_angle_vec: Option<Vec<Vec<f64>>> = match read_table(&ms, Some("FEED")) {
+            Ok(mut feed_table) => {
+                if feed_table
+                    .column_names()?
+                    .contains(&"RECEPTOR_ANGLE".to_string())
+                {
+                    let num_rows = feed_table.n_rows();
+                    // Check if RECEPTOR_ANGLE column exists
+                    let mut temp_vec: Vec<Vec<f64>> = vec![];
+                    for row_idx in 0..num_rows {
+                        temp_vec.push(feed_table.get_cell_as_vec("RECEPTOR_ANGLE", row_idx)?);
+                    }
+                    Some(temp_vec)
+                } else {
+                    None
+                }
+            }
+            Err(_) => None,
+        };
+
+        // Read in feed element offsets for each antenna/station (these are in ECEF coordinates)
+        // and also read in ECEF to local transformation matrix (OSKAR by default already saves the
+        // transpose, so all we have to do is multiply by it to get back to local coordinates)
+        let feed_coordinates_vec: Option<Vec<ndarray::Array2<f64>>> =
+            match read_table(&ms, Some("PHASED_ARRAY")) {
+                Ok(mut phased_array_table) => {
+                    if phased_array_table
+                        .column_names()?
+                        .contains(&"ELEMNT_OFFSET".to_string())
+                    {
+                        let mut temp_feed_coordinates: Vec<ndarray::Array2<f64>> = vec![];
+                        let _ = phased_array_table.for_each_row(|row| {
+                            let offsets: Array2<f64> = row.get_cell("ELEMENT_OFFSET")?;
+                            let transform_mat: Array2<f64> = row.get_cell("COORDINATE_AXES")?;
+
+                            // NOTE: Not sure what the to_owned() does here...
+                            temp_feed_coordinates
+                                .push(offsets.t().to_owned().dot(&transform_mat.to_owned()));
+
+                            Ok(())
+                        })?;
+
+                        Some(temp_feed_coordinates)
+                    } else {
+                        None
+                    }
+                }
+                Err(_) => None,
+            };
+
         let obs_context = ObsContext {
             input_data_type: VisInputType::MeasurementSet,
             obsid,
@@ -954,6 +1009,8 @@ impl MsReader {
             flagged_fine_chans,
             flagged_fine_chans_per_coarse_chan,
             polarisations: pols,
+            feed_angles: feed_angle_vec,
+            feed_coordindates: feed_coordinates_vec,
         };
 
         let ms = MsReader {
