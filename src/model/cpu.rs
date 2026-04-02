@@ -112,34 +112,56 @@ impl<'a> SkyModellerCpu<'a> {
         let mut unique_tiles = vec![];
         let mut tile_index_to_array_index_map = Vec::with_capacity(total_num_tiles);
 
-        let mut i_array_tile = 0;
-        for (i_tile, (gains, delays)) in gains.outer_iter().zip(delays.outer_iter()).enumerate() {
-            if flagged_tiles.contains(&i_tile) {
-                tile_index_to_array_index_map.push(0);
-                continue;
-            }
+        // NOTE: If beam type is SKA, all tiles should be unique.
+        let beam_type = beam.get_beam_type();
 
-            let (gains, delays) = mwa_hyperbeam::fix_amps_ndarray(gains, delays);
-
-            let mut unique_tile_hasher = DefaultHasher::new();
-            delays.hash(&mut unique_tile_hasher);
-            // We can't hash f64 values, but we can hash their bits.
-            for gain in gains {
-                gain.to_bits().hash(&mut unique_tile_hasher);
+        match beam_type {
+            BeamType::AnalyticSka => {
+                let mut current_unique_idx_counter = 0;
+                for i_tile in 0..total_num_tiles {
+                    if flagged_tiles.contains(&i_tile) {
+                        tile_index_to_array_index_map.push(0);
+                    } else {
+                        unique_tiles.push(i_tile);
+                        tile_index_to_array_index_map.push(current_unique_idx_counter);
+                        current_unique_idx_counter += 1;
+                    }
+                }
             }
-            let unique_tile_hash = unique_tile_hasher.finish();
-            let index = if let Some((_, index)) = unique_hashes
-                .iter()
-                .find(|(unique_hash, _)| *unique_hash == unique_tile_hash)
-            {
-                *index
-            } else {
-                unique_hashes.push((unique_tile_hash, i_array_tile));
-                unique_tiles.push(i_tile);
-                i_array_tile += 1;
-                i_array_tile - 1
-            };
-            tile_index_to_array_index_map.push(index);
+            _ => {
+                // This match arm catches the normal path
+                let mut i_array_tile = 0;
+                for (i_tile, (gains, delays)) in
+                    gains.outer_iter().zip(delays.outer_iter()).enumerate()
+                {
+                    if flagged_tiles.contains(&i_tile) {
+                        tile_index_to_array_index_map.push(0);
+                        continue;
+                    }
+
+                    let (gains, delays) = mwa_hyperbeam::fix_amps_ndarray(gains, delays);
+
+                    let mut unique_tile_hasher = DefaultHasher::new();
+                    delays.hash(&mut unique_tile_hasher);
+                    // We can't hash f64 values, but we can hash their bits.
+                    for gain in gains {
+                        gain.to_bits().hash(&mut unique_tile_hasher);
+                    }
+                    let unique_tile_hash = unique_tile_hasher.finish();
+                    let index = if let Some((_, index)) = unique_hashes
+                        .iter()
+                        .find(|(unique_hash, _)| *unique_hash == unique_tile_hash)
+                    {
+                        *index
+                    } else {
+                        unique_hashes.push((unique_tile_hash, i_array_tile));
+                        unique_tiles.push(i_tile);
+                        i_array_tile += 1;
+                        i_array_tile - 1
+                    };
+                    tile_index_to_array_index_map.push(index);
+                }
+            }
         }
 
         let mut unique_beam_freqs = vec![];
