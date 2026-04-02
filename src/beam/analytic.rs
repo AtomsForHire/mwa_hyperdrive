@@ -41,6 +41,26 @@ impl AnalyticBeam {
         Self::new_inner(AnalyticType::Rts, num_tiles, delays, gains)
     }
 
+    pub(crate) fn new_ska(num_tiles: usize) -> Result<AnalyticBeam, BeamError> {
+        Self::new_inner_ska(AnalyticType::Ska, 307)
+    }
+
+    fn new_inner_ska(at: AnalyticType, num_tiles: usize) -> Result<AnalyticBeam, BeamError> {
+        // Wrap the `AnalyticBeam` out of hyperbeam with our own `AnalyticBeam`.
+        let hyperbeam_object = mwa_hyperbeam::analytic::AnalyticBeam::new_custom(
+            at,
+            at.get_default_dipole_height(),
+            4,
+        );
+        Ok(AnalyticBeam {
+            hyperbeam_object,
+            analytic_type: at,
+            delays,
+            gains,
+            ideal_delays,
+        })
+    }
+
     fn new_inner(
         at: AnalyticType,
         num_tiles: usize,

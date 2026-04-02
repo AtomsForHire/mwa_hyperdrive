@@ -60,6 +60,10 @@ pub enum BeamType {
     #[strum(serialize = "analytic-rts")]
     AnalyticRts,
 
+    /// SKA-Low array factor
+    #[strum(serialize = "analytic-ska")]
+    AnalyticSka,
+
     /// a.k.a. [`NoBeam`]. Only returns identity matrices.
     #[strum(serialize = "none")]
     None,
@@ -454,6 +458,12 @@ pub fn create_beam_object(
                 dipole_delays,
                 None,
             )?))
+        }
+
+        BeamType::AnalyticSka => {
+            debug!("Setting up analytic SKA beam object");
+            // Don't need to validate delays
+            Ok(Box::new(AnalyticBeam::new_ska());
         }
     }
 }

@@ -357,6 +357,11 @@ impl BeamArgs {
                 };
                 Box::new(beam)
             }
+
+            BeamType::AnalyticSka => {
+                let beam = AnalyticBeam::new_ska(307)?;
+                Box::new(beam)
+            }
         };
 
         if let Some(d) = beam.get_ideal_dipole_delays() {
