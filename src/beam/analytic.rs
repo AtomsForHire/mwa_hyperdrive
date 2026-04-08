@@ -7,6 +7,7 @@
 use log::debug;
 use marlu::{AzEl, Jones};
 use mwa_hyperbeam::analytic::AnalyticType;
+use mwa_hyperbeam::analytic::SkaConfig;
 use ndarray::prelude::*;
 
 use super::{partial_to_full, validate_delays, Beam, BeamError, BeamType, Delays};
@@ -41,17 +42,14 @@ impl AnalyticBeam {
         Self::new_inner(AnalyticType::Rts, num_tiles, delays, gains)
     }
 
-    pub(crate) fn new_ska(num_tiles: usize) -> Result<AnalyticBeam, BeamError> {
-        Self::new_inner_ska(AnalyticType::Ska, 307)
+    pub(crate) fn new_ska(ska_params: SkaConfig) -> Result<AnalyticBeam, BeamError> {
+        Self::new_inner_ska(AnalyticType::Ska, SkaConfig)
     }
 
-    fn new_inner_ska(at: AnalyticType, num_tiles: usize) -> Result<AnalyticBeam, BeamError> {
+    // NOTE: New inner function for creating SKA beam.
+    fn new_inner_ska(at: AnalyticType, ska_params: SkaConfig) -> Result<AnalyticBeam, BeamError> {
         // Wrap the `AnalyticBeam` out of hyperbeam with our own `AnalyticBeam`.
-        let hyperbeam_object = mwa_hyperbeam::analytic::AnalyticBeam::new_custom(
-            at,
-            at.get_default_dipole_height(),
-            4,
-        );
+        let hyperbeam_object = mwa_hyperbeam::analytic::AnalyticBeam::new_ska(ska_params);
         Ok(AnalyticBeam {
             hyperbeam_object,
             analytic_type: at,
