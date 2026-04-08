@@ -26,9 +26,13 @@ use std::{path::Path, str::FromStr};
 
 use itertools::Itertools;
 use log::debug;
-use marlu::{AzEl, Jones};
+use marlu::{AzEl, Jones, RADec};
 use ndarray::prelude::*;
 use strum::IntoEnumIterator;
+
+use mwa_hyperbeam::analytic::SkaConfig;
+// Default variables for create_beam_object ska beams
+const DEFAULT_SKA_PHASE_CENTRE: RADec = RADec { ra: 0.0, dec: 0.0 };
 
 #[cfg(any(feature = "cuda", feature = "hip"))]
 use crate::gpu::{DevicePointer, GpuFloat};
@@ -463,7 +467,13 @@ pub fn create_beam_object(
         BeamType::AnalyticSka => {
             debug!("Setting up analytic SKA beam object");
             // Don't need to validate delays
-            Ok(Box::new(AnalyticBeam::new_ska());
+            let ska_params = SkaConfig {
+                number_of_stations: 1,
+                feed_angles_rad: None,
+                feed_coordinates: None,
+                phase_centre: DEFAULT_SKA_PHASE_CENTRE,
+            };
+            Ok(Box::new(AnalyticBeam::new_ska(ska_params)?))
         }
     }
 }

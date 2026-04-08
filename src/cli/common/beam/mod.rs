@@ -364,7 +364,9 @@ impl BeamArgs {
 
             // NOTE: Create the SKA ArrayFactor beam here!
             BeamType::AnalyticSka => {
-                let beam = AnalyticBeam::new_ska(ska_params)?;
+                let beam = AnalyticBeam::new_ska(
+                    ska_params.expect("Somehow ska_params is None in SKA match arm!"),
+                )?;
                 Box::new(beam)
             }
         };

@@ -59,7 +59,6 @@ struct VisSubtractCliArgs {
     #[clap(long, help_heading = "OUTPUT FILES")]
     output_vis_freq_average: Option<String>,
 
-
     /// Rather than writing out the entire input bandwidth, write out only the
     /// smallest contiguous band. e.g. Typical 40 kHz MWA data has 768 channels,
     /// but the first 2 and last 2 channels are usually flagged. Turning this
@@ -170,6 +169,7 @@ impl VisSubtractArgs {
             obs_context.dipole_delays.clone(),
             obs_context.dipole_gains.clone(),
             Some(obs_context.input_data_type),
+            None,
         )?;
         let modelling_params @ ModellingParams {
             apply_precession, ..

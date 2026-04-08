@@ -16,6 +16,7 @@ use marlu::{
     pos::{precession::precess_time, xyz::xyzs_to_cross_uvws},
     LatLngHeight, XyzGeodetic,
 };
+use mwa_hyperbeam::analytic::SkaConfig;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use vec1::{vec1, Vec1};
@@ -129,7 +130,6 @@ struct DiCalCliArgs {
     #[clap(long, help_heading = "OUTPUT FILES")]
     output_model_freq_average: Option<String>,
 
-
     /// When writing out model visibilities, rather than writing out the entire
     /// input bandwidth, write out only the smallest contiguous band. e.g.
     /// Typical 40 kHz MWA data has 768 channels, but the first 2 and last 2
@@ -231,12 +231,24 @@ impl DiCalArgs {
         let obs_context = input_vis_params.get_obs_context();
         let total_num_tiles = input_vis_params.get_total_num_tiles();
 
+        // NOTE: NEW SKA STUFF HERE =================================
+        let ska_beam_params = SkaConfig {
+            number_of_stations: total_num_tiles,
+            feed_angles_rad: obs_context.feed_angles.clone(),
+            feed_coordinates: obs_context.feed_coordindates.clone(),
+            phase_centre: obs_context.phase_centre,
+        };
+
+        // NOTE: ====================================================
+
         let beam = beam_args.parse(
             total_num_tiles,
             obs_context.dipole_delays.clone(),
             obs_context.dipole_gains.clone(),
             Some(obs_context.input_data_type),
+            Some(ska_beam_params),
         )?;
+
         let modelling_params @ ModellingParams { apply_precession } = model_args.parse();
 
         let DiCalCliArgs {

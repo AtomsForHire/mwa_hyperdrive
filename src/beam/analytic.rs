@@ -43,7 +43,7 @@ impl AnalyticBeam {
     }
 
     pub(crate) fn new_ska(ska_params: SkaConfig) -> Result<AnalyticBeam, BeamError> {
-        Self::new_inner_ska(AnalyticType::Ska, SkaConfig)
+        Self::new_inner_ska(AnalyticType::Ska, ska_params)
     }
 
     // NOTE: New inner function for creating SKA beam.
@@ -118,6 +118,7 @@ impl AnalyticBeam {
         delays: &[u32],
         amps: &[f64],
         latitude_rad: f64,
+        tile_index: Option<usize>,
     ) -> Result<Jones<f64>, mwa_hyperbeam::analytic::AnalyticBeamError> {
         self.hyperbeam_object.calc_jones_pair(
             azel.az,
@@ -127,6 +128,7 @@ impl AnalyticBeam {
             amps,
             latitude_rad,
             true,
+            tile_index,
         )
     }
 
@@ -137,6 +139,7 @@ impl AnalyticBeam {
         delays: &[u32],
         amps: &[f64],
         latitude_rad: f64,
+        tile_index: Option<usize>,
     ) -> Result<Vec<Jones<f64>>, mwa_hyperbeam::analytic::AnalyticBeamError> {
         self.hyperbeam_object.calc_jones_array(
             azels,
@@ -145,6 +148,7 @@ impl AnalyticBeam {
             amps,
             latitude_rad,
             true,
+            tile_index,
         )
     }
 
@@ -156,6 +160,7 @@ impl AnalyticBeam {
         amps: &[f64],
         latitude_rad: f64,
         results: &mut [Jones<f64>],
+        tile_index: Option<usize>,
     ) -> Result<(), mwa_hyperbeam::analytic::AnalyticBeamError> {
         self.hyperbeam_object.calc_jones_array_inner(
             azels,
@@ -165,6 +170,7 @@ impl AnalyticBeam {
             latitude_rad,
             true,
             results,
+            tile_index,
         )
     }
 }
@@ -174,6 +180,7 @@ impl Beam for AnalyticBeam {
         match self.analytic_type {
             AnalyticType::MwaPb => BeamType::AnalyticMwaPb,
             AnalyticType::Rts => BeamType::AnalyticRts,
+            AnalyticType::Ska => BeamType::AnalyticSka,
         }
     }
 
@@ -219,12 +226,13 @@ impl Beam for AnalyticBeam {
                 delays.as_slice().unwrap(),
                 amps.as_slice().unwrap(),
                 latitude_rad,
+                Some(tile_index),
             )?;
             Ok(j)
         } else {
             let delays = &self.ideal_delays;
             let amps = [1.0; 32];
-            let j = self.calc_jones_inner(azel, freq_hz, delays, &amps, latitude_rad)?;
+            let j = self.calc_jones_inner(azel, freq_hz, delays, &amps, latitude_rad, None)?;
             Ok(j)
         }
     }
@@ -265,11 +273,20 @@ impl Beam for AnalyticBeam {
                 amps.as_slice().unwrap(),
                 latitude_rad,
                 results,
+                Some(tile_index),
             )?;
         } else {
             let delays = &self.ideal_delays;
             let amps = [1.0; 32];
-            self.calc_jones_array_inner(azels, freq_hz, delays, &amps, latitude_rad, results)?;
+            self.calc_jones_array_inner(
+                azels,
+                freq_hz,
+                delays,
+                &amps,
+                latitude_rad,
+                results,
+                None,
+            )?;
         }
         Ok(())
     }

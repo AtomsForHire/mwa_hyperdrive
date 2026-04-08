@@ -103,7 +103,7 @@ fn calc_cpu(args: &BeamArgs) -> Result<(), HyperdriveError> {
 
     let beam = beam_args
         .clone()
-        .parse(1, Some(Delays::Partial(vec![0; 16])), None, None)?;
+        .parse(1, Some(Delays::Partial(vec![0; 16])), None, None, None)?;
     let mut out = BufWriter::new(File::create(output)?);
 
     let azels: Vec<_> = gen_azzas(max_za.to_radians(), step.to_radians())
