@@ -21,6 +21,8 @@ use crate::{
     io::read::VisInputType,
 };
 
+use mwa_hyperbeam::analytic::SkaConfig;
+
 lazy_static::lazy_static! {
     static ref BEAM_TYPE_HELP: String =
         format!("The beam model to use. Supported models: {}. Default: {}", *BEAM_TYPES_COMMA_SEPARATED, BeamType::default());
@@ -75,6 +77,7 @@ impl BeamArgs {
         data_dipole_delays: Option<Delays>,
         dipole_gains: Option<Array2<f64>>,
         input_data_type: Option<VisInputType>,
+        ska_params: Option<SkaConfig>,
     ) -> Result<Box<dyn Beam>, BeamError> {
         let Self {
             beam_type,
@@ -258,6 +261,7 @@ impl BeamArgs {
                     }
                     BeamType::FEE => unreachable!(),
                     BeamType::None => unreachable!(),
+                    BeamType::AnalyticSka => unreachable!(),
                 }
 
                 let mut dipole_delays = match user_dipole_delays {
@@ -358,8 +362,9 @@ impl BeamArgs {
                 Box::new(beam)
             }
 
+            // NOTE: Create the SKA ArrayFactor beam here!
             BeamType::AnalyticSka => {
-                let beam = AnalyticBeam::new_ska(307)?;
+                let beam = AnalyticBeam::new_ska(ska_params)?;
                 Box::new(beam)
             }
         };
