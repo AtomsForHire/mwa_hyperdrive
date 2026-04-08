@@ -675,6 +675,8 @@ impl UvfitsReader {
             flagged_fine_chans: vec![],
             flagged_fine_chans_per_coarse_chan: None,
             polarisations: metadata.pols,
+            feed_angles: None,
+            feed_coordindates: None,
         };
 
         Ok(UvfitsReader {
