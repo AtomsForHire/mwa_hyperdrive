@@ -319,7 +319,13 @@ impl<'a> SkyModellerCpu<'a> {
             "uvws.len() != self.tile_baseline_flags.unflagged_cross_baseline_to_tile_map.len()"
         );
 
-        let beam_responses = self.get_beam_responses(azels, array_latitude_rad)?;
+        // NOTE: SKA logic needs lst_rad for now
+        let input = match self.beam.get_beam_type() {
+            BeamType::AnalyticSka => lst_rad,
+            _ => array_latitude_rad,
+        };
+
+        let beam_responses = self.get_beam_responses(azels, input)?;
 
         // Iterate over the unflagged baseline axis.
         vis_model_fb
@@ -442,7 +448,13 @@ impl<'a> SkyModellerCpu<'a> {
             "uvws.len() != self.tile_baseline_flags.unflagged_cross_baseline_to_tile_map.len()"
         );
 
-        let beam_responses = self.get_beam_responses(azels, array_latitude_rad)?;
+        // NOTE: SKA logic needs lst_rad for now
+        let input = match self.beam.get_beam_type() {
+            BeamType::AnalyticSka => lst_rad,
+            _ => array_latitude_rad,
+        };
+
+        let beam_responses = self.get_beam_responses(azels, input)?;
 
         // Iterate over the unflagged baseline axis.
         vis_model_fb
@@ -608,7 +620,13 @@ impl<'a> SkyModellerCpu<'a> {
             c64::new(0.0, -1.0),
         ];
 
-        let beam_responses = self.get_beam_responses(azels, array_latitude_rad)?;
+        // NOTE: SKA logic needs lst_rad for now
+        let input = match self.beam.get_beam_type() {
+            BeamType::AnalyticSka => lst_rad,
+            _ => array_latitude_rad,
+        };
+
+        let beam_responses = self.get_beam_responses(azels, input)?;
 
         // Iterate over the unflagged baseline axis.
         vis_model_fb
