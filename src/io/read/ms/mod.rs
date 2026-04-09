@@ -950,7 +950,10 @@ impl MsReader {
                     None
                 }
             }
-            Err(_) => None,
+            Err(e) => {
+                eprintln!("Error when reading in measurement set FEED table: {e}");
+                None
+            }
         };
 
         // Read in feed element offsets for each antenna/station (these are in ECEF coordinates)
@@ -961,7 +964,7 @@ impl MsReader {
                 Ok(mut phased_array_table) => {
                     if phased_array_table
                         .column_names()?
-                        .contains(&"ELEMNT_OFFSET".to_string())
+                        .contains(&"ELEMENT_OFFSET".to_string())
                     {
                         let mut temp_feed_coordinates: Vec<ndarray::Array2<f64>> = vec![];
                         let _ = phased_array_table.for_each_row(|row| {
@@ -970,17 +973,21 @@ impl MsReader {
 
                             // NOTE: Not sure what the to_owned() does here...
                             temp_feed_coordinates
-                                .push(offsets.t().to_owned().dot(&transform_mat.to_owned()));
+                                .push(offsets.t().to_owned().dot(&transform_mat.t().to_owned()));
 
                             Ok(())
                         })?;
 
                         Some(temp_feed_coordinates)
                     } else {
+                        eprintln!("Error when reading ELEMENT_OFFSET column of PHASED_ARRAY table");
                         None
                     }
                 }
-                Err(_) => None,
+                Err(e) => {
+                    eprintln!("Error when reading in measurement set PHASED_ARRAY table: {e}");
+                    None
+                }
             };
 
         let obs_context = ObsContext {

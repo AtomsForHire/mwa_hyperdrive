@@ -250,6 +250,7 @@ impl BeamArgs {
             }
 
             BeamType::AnalyticMwaPb | BeamType::AnalyticRts => {
+                printer.push_line("Type: MwaPb | RTS".into());
                 match beam_type {
                     BeamType::AnalyticMwaPb => {
                         debug!("Setting up an mwa_pb-flavoured analytic beam object");
@@ -364,6 +365,7 @@ impl BeamArgs {
 
             // NOTE: Create the SKA ArrayFactor beam here!
             BeamType::AnalyticSka => {
+                printer.push_line("Type: SKA".into());
                 let beam = AnalyticBeam::new_ska(
                     ska_params.expect("Somehow ska_params is None in SKA match arm!"),
                 )?;
