@@ -53,9 +53,9 @@ impl AnalyticBeam {
         Ok(AnalyticBeam {
             hyperbeam_object,
             analytic_type: at,
-            delays,
-            gains,
-            ideal_delays,
+            delays: Array2::zeros((4, 4)),
+            gains: Array2::zeros((4, 4)),
+            ideal_delays: [0u32; 16],
         })
     }
 
