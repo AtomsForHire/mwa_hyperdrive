@@ -99,7 +99,7 @@ pub(crate) fn veto_sources(
                     let j = match beam.calc_jones(
                             *azel,
                             cc_freq,
-                        None,
+                        Some(0),
                         array_latitude_rad) {
                             Ok(j) => j,
                             Err(e) => {
