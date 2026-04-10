@@ -257,37 +257,54 @@ impl Beam for AnalyticBeam {
         latitude_rad: f64,
         results: &mut [marlu::Jones<f64>],
     ) -> Result<(), BeamError> {
-        if let Some(tile_index) = tile_index {
-            if tile_index > self.delays.len_of(Axis(0)) {
-                return Err(BeamError::BadTileIndex {
-                    got: tile_index,
-                    max: self.delays.len_of(Axis(0)),
-                });
+        match self.get_beam_type() {
+            BeamType::FEE | BeamType::AnalyticMwaPb | BeamType::AnalyticRts | BeamType::None => {
+                if let Some(tile_index) = tile_index {
+                    if tile_index > self.delays.len_of(Axis(0)) {
+                        return Err(BeamError::BadTileIndex {
+                            got: tile_index,
+                            max: self.delays.len_of(Axis(0)),
+                        });
+                    }
+                    let delays = self.delays.slice(s![tile_index, ..]);
+                    let amps = self.gains.slice(s![tile_index, ..]);
+                    self.calc_jones_array_inner(
+                        azels,
+                        freq_hz,
+                        delays.as_slice().unwrap(),
+                        amps.as_slice().unwrap(),
+                        latitude_rad,
+                        results,
+                        Some(tile_index),
+                    )?;
+                } else {
+                    let delays = &self.ideal_delays;
+                    let amps = [1.0; 32];
+                    self.calc_jones_array_inner(
+                        azels,
+                        freq_hz,
+                        delays,
+                        &amps,
+                        latitude_rad,
+                        results,
+                        None,
+                    )?;
+                }
             }
-            let delays = self.delays.slice(s![tile_index, ..]);
-            let amps = self.gains.slice(s![tile_index, ..]);
-            self.calc_jones_array_inner(
-                azels,
-                freq_hz,
-                delays.as_slice().unwrap(),
-                amps.as_slice().unwrap(),
-                latitude_rad,
-                results,
-                Some(tile_index),
-            )?;
-        } else {
-            let delays = &self.ideal_delays;
-            let amps = [1.0; 32];
-            self.calc_jones_array_inner(
-                azels,
-                freq_hz,
-                delays,
-                &amps,
-                latitude_rad,
-                results,
-                None,
-            )?;
-        }
+            BeamType::AnalyticSka => {
+                let delays = &self.ideal_delays;
+                let amps = [1.0; 32];
+                self.calc_jones_array_inner(
+                    azels,
+                    freq_hz,
+                    delays,
+                    &amps,
+                    latitude_rad,
+                    results,
+                    tile_index,
+                )?;
+            }
+        };
         Ok(())
     }
 
