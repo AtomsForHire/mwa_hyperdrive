@@ -34,6 +34,8 @@ use crate::io::read::{
     RawDataCorrections,
 };
 
+use log::warn;
+
 pub(crate) fn read(file: &Path) -> Result<CalibrationSolutions, SolutionsReadError> {
     let mut fptr = fits_open(file)?;
     let hdu = fits_open_hdu(&mut fptr, 0)?;
@@ -773,6 +775,34 @@ pub(crate) fn write(sols: &CalibrationSolutions, file: &Path) -> Result<(), Solu
     // because we can't write complex numbers directly to FITS files; instead,
     // we write each real and imag float as individual floats.
     let (num_timeblocks, total_num_tiles, total_num_chanblocks) = di_jones.dim();
+
+    let dipole_gains = match dipole_gains {
+        Some(a) if a.len_of(Axis(0)) == total_num_tiles && a.len_of(Axis(1)) == 32 => Some(a),
+        Some(a) => {
+            warn!(
+                "DipoleGains has shape {}×{} but solutions have {} tiles; omitting DipoleGains from output",
+                a.len_of(Axis(0)),
+                a.len_of(Axis(1)),
+                total_num_tiles
+            );
+            None
+        }
+        None => None,
+    };
+    let dipole_delays = match dipole_delays {
+        Some(a) if a.len_of(Axis(0)) == total_num_tiles && a.len_of(Axis(1)) == 16 => Some(a),
+        Some(a) => {
+            warn!(
+                "DipoleDelays has shape {}×{} but solutions have {} tiles; omitting DipoleDelays from output",
+                a.len_of(Axis(0)),
+                a.len_of(Axis(1)),
+                total_num_tiles
+            );
+            None
+        }
+        None => None,
+    };
+
     let dim = [num_timeblocks, total_num_tiles, total_num_chanblocks, 4 * 2];
     let image_description = ImageDescription {
         data_type: ImageType::Double,
@@ -918,14 +948,16 @@ pub(crate) fn write(sols: &CalibrationSolutions, file: &Path) -> Result<(), Solu
             assert_eq!(tile_names.len(), total_num_tiles);
             hdu.write_col(&mut fptr, "TileName", tile_names)?;
         };
+        // if let Some(dipole_gains) = dipole_gains {
+        //     assert_eq!(dipole_gains.len_of(Axis(0)), total_num_tiles);
+        //     assert_eq!(dipole_gains.len_of(Axis(1)), 32);
         if let Some(dipole_gains) = dipole_gains {
-            assert_eq!(dipole_gains.len_of(Axis(0)), total_num_tiles);
-            assert_eq!(dipole_gains.len_of(Axis(1)), 32);
             hdu.write_col(&mut fptr, "DipoleGains", dipole_gains.as_slice().unwrap())?;
         }
+        // if let Some(dipole_delays) = dipole_delays {
+        //     assert_eq!(dipole_delays.len_of(Axis(0)), total_num_tiles);
+        //     assert_eq!(dipole_delays.len_of(Axis(1)), 16);
         if let Some(dipole_delays) = dipole_delays {
-            assert_eq!(dipole_delays.len_of(Axis(0)), total_num_tiles);
-            assert_eq!(dipole_delays.len_of(Axis(1)), 16);
             hdu.write_col(&mut fptr, "DipoleDelays", dipole_delays.as_slice().unwrap())?;
         }
     }
