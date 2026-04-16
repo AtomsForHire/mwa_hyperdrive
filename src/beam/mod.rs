@@ -33,6 +33,7 @@ use strum::IntoEnumIterator;
 use mwa_hyperbeam::analytic::SkaConfig;
 // Default variables for create_beam_object ska beams
 const DEFAULT_SKA_PHASE_CENTRE: RADec = RADec { ra: 0.0, dec: 0.0 };
+const DEFAULT_SKA_SITE_LATITUDE: f64 = 1.0;
 
 #[cfg(any(feature = "cuda", feature = "hip"))]
 use crate::gpu::{DevicePointer, GpuFloat};
@@ -472,6 +473,7 @@ pub fn create_beam_object(
                 feed_angles_rad: None,
                 feed_coordinates: None,
                 phase_centre: DEFAULT_SKA_PHASE_CENTRE,
+                site_latitude_rad: DEFAULT_SKA_SITE_LATITUDE,
             };
             Ok(Box::new(AnalyticBeam::new_ska(ska_params)?))
         }

@@ -237,6 +237,7 @@ impl DiCalArgs {
             feed_angles_rad: obs_context.feed_angles.clone(),
             feed_coordinates: obs_context.feed_coordindates.clone(),
             phase_centre: obs_context.phase_centre,
+            site_latitude_rad: obs_context.array_position.latitude_rad,
         };
 
         // NOTE: ====================================================
