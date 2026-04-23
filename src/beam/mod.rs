@@ -69,6 +69,9 @@ pub enum BeamType {
     #[strum(serialize = "analytic-ska")]
     AnalyticSka,
 
+    #[strum(serialize = "analytic-ska-mean")]
+    AnalyticSkaMean,
+
     /// a.k.a. [`NoBeam`]. Only returns identity matrices.
     #[strum(serialize = "none")]
     None,
@@ -465,7 +468,7 @@ pub fn create_beam_object(
             )?))
         }
 
-        BeamType::AnalyticSka => {
+        BeamType::AnalyticSka | BeamType::AnalyticSkaMean => {
             debug!("Setting up analytic SKA beam object");
             // Don't need to validate delays
             let ska_params = SkaConfig {

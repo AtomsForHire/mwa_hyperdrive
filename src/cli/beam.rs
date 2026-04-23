@@ -49,6 +49,10 @@ pub struct BeamArgs {
     #[clap(short, long, default_value = "beam_responses.tsv")]
     output: PathBuf,
 
+    /// Station number
+    #[clap(long, default_value = "0")]
+    station: usize,
+
     /// Use a GPU (i.e. CUDA or HIP) to generate the beam responses.
     #[cfg(any(feature = "cuda", feature = "hip"))]
     #[clap(short, long)]
@@ -97,6 +101,7 @@ fn calc_cpu(args: &BeamArgs) -> Result<(), HyperdriveError> {
         max_za,
         step,
         output,
+        station,
         #[cfg(any(feature = "cuda", feature = "hip"))]
             gpu: _,
     } = args;
@@ -104,12 +109,22 @@ fn calc_cpu(args: &BeamArgs) -> Result<(), HyperdriveError> {
     let beam = beam_args
         .clone()
         .parse(1, Some(Delays::Partial(vec![0; 16])), None, None, None)?;
+
     let mut out = BufWriter::new(File::create(output)?);
+    let mut out_00 = BufWriter::new(File::create(format!("beam_responses_00_{station}.tsv"))?);
+    let mut out_01 = BufWriter::new(File::create(format!("beam_responses_01_{station}.tsv"))?);
+    let mut out_10 = BufWriter::new(File::create(format!("beam_responses_10_{station}.tsv"))?);
+    let mut out_11 = BufWriter::new(File::create(format!("beam_responses_11_{station}.tsv"))?);
 
     let azels: Vec<_> = gen_azzas(max_za.to_radians(), step.to_radians())
         .map(|(az, za)| AzEl::from_radians(az, FRAC_PI_2 - za))
         .collect();
-    let jones = beam.calc_jones_array(&azels, freq_mhz * 1e6, None, latitude_deg.to_radians())?;
+    let jones = beam.calc_jones_array(
+        &azels,
+        freq_mhz * 1e6,
+        Some(*station),
+        latitude_deg.to_radians(),
+    )?;
     for (j, azel) in jones.into_iter().zip(azels) {
         writeln!(
             &mut out,
@@ -118,6 +133,11 @@ fn calc_cpu(args: &BeamArgs) -> Result<(), HyperdriveError> {
             azel.za(),
             j[0].norm() + j[3].norm()
         )?;
+
+        writeln!(&mut out_00, "{}\t{}\t{:e}", azel.az, azel.za(), j[0].norm())?;
+        writeln!(&mut out_01, "{}\t{}\t{:e}", azel.az, azel.za(), j[1].norm())?;
+        writeln!(&mut out_10, "{}\t{}\t{:e}", azel.az, azel.za(), j[2].norm())?;
+        writeln!(&mut out_11, "{}\t{}\t{:e}", azel.az, azel.za(), j[3].norm())?;
     }
 
     Ok(())

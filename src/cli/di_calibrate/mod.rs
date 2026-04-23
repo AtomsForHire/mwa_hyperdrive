@@ -9,6 +9,7 @@ mod tests;
 
 use std::{num::NonZeroUsize, path::PathBuf, str::FromStr};
 
+use crate::beam::Beam;
 use clap::Parser;
 use itertools::Itertools;
 use log::{debug, info, log_enabled, trace, Level::Debug};
@@ -242,12 +243,12 @@ impl DiCalArgs {
 
         // NOTE: ====================================================
 
-        let beam = beam_args.parse(
+        let beam = beam_args.clone().parse(
             total_num_tiles,
             obs_context.dipole_delays.clone(),
             obs_context.dipole_gains.clone(),
             Some(obs_context.input_data_type),
-            Some(ska_beam_params),
+            Some(ska_beam_params.clone()).clone(),
         )?;
 
         let modelling_params @ ModellingParams { apply_precession } = model_args.parse();
@@ -288,12 +289,36 @@ impl DiCalArgs {
             (precession_info.lmst, latitude_rad)
         };
 
+        // Veto with a mean ska beam
+        let veto_beam: Box<dyn Beam> = match beam_args.beam_type.as_deref() {
+            Some("analytic-ska") => {
+                let veto_beam_args = BeamArgs {
+                    beam_type: Some("analytic-ska-mean".to_owned()),
+                    no_beam: false,
+                    delays: None,
+                    unity_dipole_gains: false,
+                    beam_file: None,
+                };
+
+                let veto_beam = veto_beam_args.parse(
+                    total_num_tiles,
+                    obs_context.dipole_delays.clone(),
+                    obs_context.dipole_gains.clone(),
+                    Some(obs_context.input_data_type),
+                    Some(ska_beam_params),
+                )?;
+
+                veto_beam
+            }
+            _ => beam,
+        };
+
         let source_list = srclist_args.parse(
             obs_context.phase_centre,
             lst_rad,
             latitude_rad,
             &obs_context.get_veto_freqs(),
-            &*beam,
+            &*veto_beam,
         )?;
 
         // Set up the calibration timeblocks.
@@ -607,7 +632,7 @@ impl DiCalArgs {
 
         Ok(DiCalParams {
             input_vis_params,
-            beam,
+            beam: veto_beam,
             source_list,
             cal_timeblocks,
             uvw_min: uvw_min_metres,

@@ -181,6 +181,7 @@ impl Beam for AnalyticBeam {
             AnalyticType::MwaPb => BeamType::AnalyticMwaPb,
             AnalyticType::Rts => BeamType::AnalyticRts,
             AnalyticType::Ska => BeamType::AnalyticSka,
+            AnalyticType::SkaMean => BeamType::AnalyticSkaMean,
         }
     }
 
@@ -291,7 +292,7 @@ impl Beam for AnalyticBeam {
                     )?;
                 }
             }
-            BeamType::AnalyticSka => {
+            BeamType::AnalyticSka | BeamType::AnalyticSkaMean => {
                 let delays = &self.ideal_delays;
                 let amps = [1.0; 32];
                 self.calc_jones_array_inner(

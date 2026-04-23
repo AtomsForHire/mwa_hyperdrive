@@ -263,6 +263,7 @@ impl BeamArgs {
                     BeamType::FEE => unreachable!(),
                     BeamType::None => unreachable!(),
                     BeamType::AnalyticSka => unreachable!(),
+                    BeamType::AnalyticSkaMean => unreachable!(),
                 }
 
                 let mut dipole_delays = match user_dipole_delays {
@@ -366,6 +367,14 @@ impl BeamArgs {
             // NOTE: Create the SKA ArrayFactor beam here!
             BeamType::AnalyticSka => {
                 printer.push_line("Type: SKA".into());
+                let beam = AnalyticBeam::new_ska(
+                    ska_params.expect("Somehow ska_params is None in SKA match arm!"),
+                )?;
+                Box::new(beam)
+            }
+
+            BeamType::AnalyticSkaMean => {
+                printer.push_line("Type: SKAMean".into());
                 let beam = AnalyticBeam::new_ska(
                     ska_params.expect("Somehow ska_params is None in SKA match arm!"),
                 )?;
