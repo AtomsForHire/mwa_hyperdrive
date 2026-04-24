@@ -145,7 +145,7 @@ half = { git = "https://github.com/VoidStarKat/half-rs", tag="v2.2.1" }
 # marlu = { git = "https://github.com/MWATelescope/Marlu", branch = "v0.9.0" }
 # mwalib = { path = "../mwalib" }
 # mwalib = { git = "https://github.com/MWATelescope/mwalib", branch = "main" }
-# mwa_hyperbeam = { path = "../mwa_hyperbeam" }
-mwa_hyperbeam = { git = "https://github.com/AtomsForHire/mwa_hyperbeam", branch = "SKA-Low-analytic" }
+mwa_hyperbeam = { path = "../mwa_hyperbeam" }
+#mwa_hyperbeam = { git = "https://github.com/AtomsForHire/mwa_hyperbeam", branch = "SKA-Low-analytic" }
 marlu = { git = "https://github.com/MWATelescope/Marlu", branch = "gastly" }
 # mwa_hyperbeam = { git = "https://github.com/MWATelescope/mwa_hyperbeam", branch = "DUT1" }

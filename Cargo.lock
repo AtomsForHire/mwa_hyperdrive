@@ -1532,7 +1532,6 @@ dependencies = [
 [[package]]
 name = "mwa_hyperbeam"
 version = "0.10.4"
-source = "git+https://github.com/AtomsForHire/mwa_hyperbeam?branch=SKA-Low-analytic#8911f27a6f95f6f7e36b76654dc75a5687a978cc"
 dependencies = [
  "cbindgen 0.25.0",
  "cc",

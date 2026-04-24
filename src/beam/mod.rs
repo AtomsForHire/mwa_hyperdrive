@@ -33,8 +33,11 @@ use strum::IntoEnumIterator;
 
 use mwa_hyperbeam::analytic::SkaConfig;
 // Default variables for create_beam_object ska beams
-const DEFAULT_SKA_PHASE_CENTRE: RADec = RADec { ra: 0.0, dec: 0.0 };
-const DEFAULT_SKA_SITE_LATITUDE: f64 = 1.0;
+const DEFAULT_SKA_PHASE_CENTRE: RADec = RADec {
+    ra: 0.0,
+    dec: -0.47,
+};
+const DEFAULT_SKA_SITE_LATITUDE: f64 = -0.47;
 
 #[cfg(any(feature = "cuda", feature = "hip"))]
 use crate::gpu::{DevicePointer, GpuFloat};

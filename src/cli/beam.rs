@@ -13,7 +13,7 @@ use clap::Parser;
 use marlu::AzEl;
 use num_traits::{Float, FromPrimitive};
 
-use crate::{beam::Delays, HyperdriveError};
+use crate::{beam::Delays, create_beam_object, HyperdriveError};
 
 /// Generate beam response values.
 #[derive(Parser, Debug)]
@@ -106,9 +106,15 @@ fn calc_cpu(args: &BeamArgs) -> Result<(), HyperdriveError> {
             gpu: _,
     } = args;
 
-    let beam = beam_args
-        .clone()
-        .parse(1, Some(Delays::Partial(vec![0; 16])), None, None, None)?;
+    // let beam = beam_args
+    //     .clone()
+    //     .parse(1, Some(Delays::Partial(vec![0; 16])), None, None, None)?;
+
+    let beam = create_beam_object(
+        Some(beam_args.beam_type.clone().unwrap().as_str()),
+        1,
+        Delays::Partial(vec![0; 16]),
+    )?;
 
     let mut out = BufWriter::new(File::create(output)?);
     let mut out_00 = BufWriter::new(File::create(format!("beam_responses_00_{station}.tsv"))?);
