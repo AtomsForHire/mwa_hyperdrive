@@ -232,25 +232,6 @@ impl DiCalArgs {
         let obs_context = input_vis_params.get_obs_context();
         let total_num_tiles = input_vis_params.get_total_num_tiles();
 
-        // NOTE: NEW SKA STUFF HERE =================================
-        let ska_beam_params = SkaConfig {
-            number_of_stations: total_num_tiles,
-            feed_angles_rad: obs_context.feed_angles.clone(),
-            feed_coordinates: obs_context.feed_coordindates.clone(),
-            phase_centre: obs_context.phase_centre,
-            site_latitude_rad: obs_context.array_position.latitude_rad,
-        };
-
-        // NOTE: ====================================================
-
-        let beam = beam_args.clone().parse(
-            total_num_tiles,
-            obs_context.dipole_delays.clone(),
-            obs_context.dipole_gains.clone(),
-            Some(obs_context.input_data_type),
-            Some(ska_beam_params.clone()).clone(),
-        )?;
-
         let modelling_params @ ModellingParams { apply_precession } = model_args.parse();
 
         let DiCalCliArgs {
@@ -288,6 +269,25 @@ impl DiCalArgs {
         } else {
             (precession_info.lmst, latitude_rad)
         };
+
+        // NOTE: NEW SKA STUFF HERE =================================
+        let ska_beam_params = SkaConfig {
+            number_of_stations: total_num_tiles,
+            feed_angles_rad: obs_context.feed_angles.clone(),
+            feed_coordinates: obs_context.feed_coordindates.clone(),
+            phase_centre: obs_context.phase_centre,
+            site_latitude_rad: latitude_rad,
+        };
+
+        // NOTE: ====================================================
+
+        let beam = beam_args.clone().parse(
+            total_num_tiles,
+            obs_context.dipole_delays.clone(),
+            obs_context.dipole_gains.clone(),
+            Some(obs_context.input_data_type),
+            Some(ska_beam_params.clone()).clone(),
+        )?;
 
         // Veto with a mean ska beam
         let veto_beam: Box<dyn Beam> = match beam_args.beam_type.as_deref() {
