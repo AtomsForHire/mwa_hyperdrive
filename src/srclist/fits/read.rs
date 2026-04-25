@@ -211,18 +211,7 @@ impl CommonCols {
             let comp_types_as_strings: Vec<String> = fe!(file, hdu.read_col(fptr, "COMP_TYPE"));
             comp_types_as_strings
                 .into_iter()
-                .map(|mut s| {
-                    let original = s.clone();
-                    let popped = s.pop();
-
-                    // This will show you exactly what is happening in each row
-                    println!(
-                        "Original: {:?}, Popped: {:?}, Left: {:?}",
-                        original, popped, s
-                    );
-
-                    popped.expect("COMP_TYPE strings aren't empty")
-                })
+                .map(|mut s| s.pop().expect("COMP_TYPE strings aren't empty"))
                 .collect()
         } else {
             // We need to determine the component types here.
@@ -535,7 +524,6 @@ fn parse_jack_source_list(
     let mut map = IndexMap::with_capacity(src_names.len());
     // Get all of the source names.
     for name in src_names {
-        println!("{:?}", name);
         map.entry(name).or_insert(vec![]);
     }
 
@@ -561,7 +549,6 @@ fn parse_jack_source_list(
             .unwrap_or_else(|| panic!("{comp_name:?} does not contain '_C'"))
             .0;
 
-        println!("{:?}, {:?}", prefix, comp_name);
         let src_comps = map.get_mut(prefix).unwrap_or_else(|| {
             panic!("Component '{comp_name}' couldn't be matched against any of the UNQ_SOURCE_ID")
         });
