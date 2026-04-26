@@ -15,7 +15,7 @@ use marlu::{Jones, RADec};
 use rayon::{iter::Either, prelude::*};
 
 use crate::{
-    beam::Beam,
+    beam::{Beam, BeamType},
     constants::*,
     srclist::{FluxDensity, ReadSourceListError, SourceList},
 };
@@ -100,7 +100,10 @@ pub(crate) fn veto_sources(
                             *azel,
                             cc_freq,
                         Some(0),
-                        array_latitude_rad) {
+                        match beam.get_beam_type() {
+                            BeamType::AnalyticSka | BeamType::AnalyticSkaMean => lst_rad,
+                            _ => array_latitude_rad
+                        }) {
                             Ok(j) => j,
                             Err(e) => {
                                 trace!("Beam error for source {}", source_name);
