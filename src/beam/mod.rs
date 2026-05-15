@@ -476,7 +476,7 @@ pub fn create_beam_object(
             debug!("Setting up analytic SKA beam object");
 
             let mut feed_angles_rad: Vec<Vec<f64>> = vec![];
-            for i in 0..256 {
+            for _i in 0..256 {
                 feed_angles_rad.push(vec![0.0, PI / 2.0]);
             }
 
