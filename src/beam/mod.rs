@@ -26,7 +26,7 @@ use std::f64::consts::PI;
 use std::{path::Path, str::FromStr};
 
 use itertools::Itertools;
-use log::debug;
+use log::{debug, info};
 use marlu::{AzEl, Jones, RADec};
 use ndarray::prelude::*;
 use strum::IntoEnumIterator;
@@ -474,6 +474,7 @@ pub fn create_beam_object(
 
         BeamType::AnalyticSka | BeamType::AnalyticSkaMean => {
             debug!("Setting up analytic SKA beam object");
+            println!("You really should not be using this command for the SKA beam at all, it's hardcoded too much. I just needed something quick, sorry");
 
             let mut feed_angles_rad: Vec<Vec<f64>> = vec![];
             for _i in 0..256 {
@@ -488,6 +489,7 @@ pub fn create_beam_object(
                 feed_coordinates: Some(feed_coordinates),
                 phase_centre: DEFAULT_SKA_PHASE_CENTRE,
                 site_latitude_rad: DEFAULT_SKA_SITE_LATITUDE,
+                num_elems_per_station: None,
             };
             Ok(Box::new(AnalyticBeam::new_ska(ska_params)?))
         }
