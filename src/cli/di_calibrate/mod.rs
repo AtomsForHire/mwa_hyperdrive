@@ -271,10 +271,19 @@ impl DiCalArgs {
         };
 
         // NOTE: NEW SKA STUFF HERE =================================
+        let num_elems_per_station: Vec<usize> = obs_context
+            .feed_coordindates
+            .clone()
+            .unwrap()
+            .into_iter()
+            .map(|arr| arr.nrows())
+            .collect();
+
         let ska_beam_params = SkaConfig {
             number_of_stations: total_num_tiles,
             feed_angles_rad: obs_context.feed_angles.clone(),
             feed_coordinates: obs_context.feed_coordindates.clone(),
+            num_elems_per_station: Some(num_elems_per_station),
             phase_centre: obs_context.phase_centre,
             site_latitude_rad: latitude_rad,
         };
