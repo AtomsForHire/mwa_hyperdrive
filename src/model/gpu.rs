@@ -989,6 +989,7 @@ impl<'a> SkyModellerGpu<'a> {
                     * azs.len()
                     * std::mem::size_of::<GpuJones>(),
             )?;
+
             self.gpu_beam.calc_jones_pair(
                 &azs,
                 &zas,
@@ -1158,9 +1159,38 @@ impl<'a> SkyModellerGpu<'a> {
         d_vis_fb: &mut DevicePointer<Jones<f32>>,
     ) -> Result<(), ModelError> {
         unsafe {
-            self.model_points(lst_rad, array_latitude_rad, d_uvws, d_beam_jones, d_vis_fb)?;
-            self.model_gaussians(lst_rad, array_latitude_rad, d_uvws, d_beam_jones, d_vis_fb)?;
-            self.model_shapelets(lst_rad, array_latitude_rad, d_uvws, d_beam_jones, d_vis_fb)?;
+            // NOTE: Yes, I know this is really hacky, but this means I only have to match on the
+            // beam type here, instead of in all three: `model_points`, `model_shapelets`, and
+            // `model_shapelets`.
+            match self.gpu_beam.get_beam_type() {
+                crate::beam::BeamType::AnalyticMwaPb
+                | crate::beam::BeamType::AnalyticRts
+                | crate::beam::BeamType::FEE
+                | crate::beam::BeamType::None => {
+                    self.model_points(lst_rad, array_latitude_rad, d_uvws, d_beam_jones, d_vis_fb)?;
+                    self.model_gaussians(
+                        lst_rad,
+                        array_latitude_rad,
+                        d_uvws,
+                        d_beam_jones,
+                        d_vis_fb,
+                    )?;
+                    self.model_shapelets(
+                        lst_rad,
+                        array_latitude_rad,
+                        d_uvws,
+                        d_beam_jones,
+                        d_vis_fb,
+                    )?;
+                }
+                crate::beam::BeamType::AnalyticSka | crate::beam::BeamType::AnalyticSkaMean => {
+                    // NOTE:
+                    // If SKA beam then pass through lst_rad in place or array_latitude_rad
+                    self.model_points(lst_rad, lst_rad, d_uvws, d_beam_jones, d_vis_fb)?;
+                    self.model_gaussians(lst_rad, lst_rad, d_uvws, d_beam_jones, d_vis_fb)?;
+                    self.model_shapelets(lst_rad, lst_rad, d_uvws, d_beam_jones, d_vis_fb)?;
+                }
+            }
         }
         Ok(())
     }
