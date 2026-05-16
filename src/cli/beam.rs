@@ -156,6 +156,8 @@ fn calc_gpu(args: &BeamArgs) -> Result<(), HyperdriveError> {
 
     use crate::gpu::{DevicePointer, GpuFloat, GpuJones};
 
+    // TODO: I don't really need to use this function for my calibration stuff, so just passing in
+    // defaults/None at the moment. Don't know if that needs to change.
     let BeamArgs {
         beam_args,
         freq_mhz,
@@ -163,12 +165,13 @@ fn calc_gpu(args: &BeamArgs) -> Result<(), HyperdriveError> {
         max_za,
         step,
         output,
+        station,
         gpu: _,
     } = args;
 
     let beam = beam_args
         .clone()
-        .parse(1, Some(Delays::Partial(vec![0; 16])), None, None)?;
+        .parse(1, Some(Delays::Partial(vec![0; 16])), None, None, None)?;
     let gpu_beam = beam.prepare_gpu_beam(&[(freq_mhz * 1e6) as u32])?;
     let mut out = BufWriter::new(File::create(output)?);
 
