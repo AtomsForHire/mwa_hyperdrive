@@ -17,7 +17,7 @@ use ndarray::prelude::*;
 
 use super::{mask_pols, shapelets, ModelError, SkyModeller};
 use crate::{
-    beam::{Beam, BeamGpu},
+    beam::{Beam, BeamGpu, BeamType},
     context::Polarisations,
     gpu::{self, gpu_kernel_call, DevicePointer, GpuError, GpuFloat, GpuJones},
     srclist::{
@@ -902,10 +902,17 @@ impl<'a> SkyModellerGpu<'a> {
                     * azs.len()
                     * std::mem::size_of::<GpuJones>(),
             )?;
+            let array_latitude = match self.gpu_beam.get_beam_type() {
+                BeamType::AnalyticMwaPb
+                | BeamType::AnalyticRts
+                | BeamType::FEE
+                | BeamType::None => array_latitude_rad,
+                BeamType::AnalyticSka | BeamType::AnalyticSkaMean => lst_rad,
+            };
             self.gpu_beam.calc_jones_pair(
                 &azs,
                 &zas,
-                array_latitude_rad,
+                array_latitude,
                 d_beam_jones.get_mut().cast(),
             )?;
         }
@@ -990,10 +997,17 @@ impl<'a> SkyModellerGpu<'a> {
                     * std::mem::size_of::<GpuJones>(),
             )?;
 
+            let array_latitude = match self.gpu_beam.get_beam_type() {
+                BeamType::AnalyticMwaPb
+                | BeamType::AnalyticRts
+                | BeamType::FEE
+                | BeamType::None => array_latitude_rad,
+                BeamType::AnalyticSka | BeamType::AnalyticSkaMean => lst_rad,
+            };
             self.gpu_beam.calc_jones_pair(
                 &azs,
                 &zas,
-                array_latitude_rad,
+                array_latitude,
                 d_beam_jones.get_mut().cast(),
             )?;
         }
@@ -1080,10 +1094,17 @@ impl<'a> SkyModellerGpu<'a> {
                     * azs.len()
                     * std::mem::size_of::<GpuJones>(),
             )?;
+            let array_latitude = match self.gpu_beam.get_beam_type() {
+                BeamType::AnalyticMwaPb
+                | BeamType::AnalyticRts
+                | BeamType::FEE
+                | BeamType::None => array_latitude_rad,
+                BeamType::AnalyticSka | BeamType::AnalyticSkaMean => lst_rad,
+            };
             self.gpu_beam.calc_jones_pair(
                 &azs,
                 &zas,
-                array_latitude_rad,
+                array_latitude,
                 d_beam_jones.get_mut().cast(),
             )?
         };
@@ -1159,38 +1180,9 @@ impl<'a> SkyModellerGpu<'a> {
         d_vis_fb: &mut DevicePointer<Jones<f32>>,
     ) -> Result<(), ModelError> {
         unsafe {
-            // NOTE: Yes, I know this is really hacky, but this means I only have to match on the
-            // beam type here, instead of in all three: `model_points`, `model_shapelets`, and
-            // `model_shapelets`.
-            match self.gpu_beam.get_beam_type() {
-                crate::beam::BeamType::AnalyticMwaPb
-                | crate::beam::BeamType::AnalyticRts
-                | crate::beam::BeamType::FEE
-                | crate::beam::BeamType::None => {
-                    self.model_points(lst_rad, array_latitude_rad, d_uvws, d_beam_jones, d_vis_fb)?;
-                    self.model_gaussians(
-                        lst_rad,
-                        array_latitude_rad,
-                        d_uvws,
-                        d_beam_jones,
-                        d_vis_fb,
-                    )?;
-                    self.model_shapelets(
-                        lst_rad,
-                        array_latitude_rad,
-                        d_uvws,
-                        d_beam_jones,
-                        d_vis_fb,
-                    )?;
-                }
-                crate::beam::BeamType::AnalyticSka | crate::beam::BeamType::AnalyticSkaMean => {
-                    // NOTE:
-                    // If SKA beam then pass through lst_rad in place or array_latitude_rad
-                    self.model_points(lst_rad, lst_rad, d_uvws, d_beam_jones, d_vis_fb)?;
-                    self.model_gaussians(lst_rad, lst_rad, d_uvws, d_beam_jones, d_vis_fb)?;
-                    self.model_shapelets(lst_rad, lst_rad, d_uvws, d_beam_jones, d_vis_fb)?;
-                }
-            }
+            self.model_points(lst_rad, array_latitude_rad, d_uvws, d_beam_jones, d_vis_fb)?;
+            self.model_gaussians(lst_rad, array_latitude_rad, d_uvws, d_beam_jones, d_vis_fb)?;
+            self.model_shapelets(lst_rad, array_latitude_rad, d_uvws, d_beam_jones, d_vis_fb)?;
         }
         Ok(())
     }
@@ -1255,10 +1247,17 @@ impl<'a> SkyModellerGpu<'a> {
         )?;
 
         unsafe {
+            let array_latitude = match self.gpu_beam.get_beam_type() {
+                BeamType::AnalyticMwaPb
+                | BeamType::AnalyticRts
+                | BeamType::FEE
+                | BeamType::None => array_latitude_rad,
+                BeamType::AnalyticSka | BeamType::AnalyticSkaMean => lst_rad,
+            };
             self.gpu_beam.calc_jones_pair(
                 &azs,
                 &zas,
-                array_latitude_rad,
+                array_latitude,
                 d_beam_jones.get_mut().cast(),
             )?;
         }
