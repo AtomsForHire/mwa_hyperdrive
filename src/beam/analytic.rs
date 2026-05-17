@@ -323,10 +323,12 @@ impl Beam for AnalyticBeam {
         };
         let freq_map = (0..freqs_hz.len()).map(|i| i as i32).collect::<Vec<_>>();
         let d_freq_map = DevicePointer::copy_to_device(&freq_map)?;
+        let beam_type = self.get_beam_type();
         Ok(Box::new(AnalyticBeamGpu {
             hyperbeam_object: gpu_beam,
             d_freqs_hz: DevicePointer::copy_to_device(freqs_hz)?,
             d_freq_map,
+            beam_type,
         }))
     }
 }
@@ -336,6 +338,7 @@ struct AnalyticBeamGpu {
     hyperbeam_object: mwa_hyperbeam::analytic::AnalyticBeamGpu,
     d_freqs_hz: DevicePointer<u32>,
     d_freq_map: DevicePointer<i32>,
+    beam_type: BeamType,
 }
 
 #[cfg(any(feature = "cuda", feature = "hip"))]
@@ -366,7 +369,7 @@ impl BeamGpu for AnalyticBeamGpu {
     }
 
     fn get_beam_type(&self) -> BeamType {
-        BeamType::FEE
+        self.beam_type
     }
 
     fn get_tile_map(&self) -> *const i32 {
