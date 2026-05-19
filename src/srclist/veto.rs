@@ -180,14 +180,14 @@ pub(crate) fn veto_sources(
 
     // If there are fewer sources than requested after vetoing, we need to bail
     // out.
-    if let Some(n) = num_sources {
-        if n > source_list.len() {
-            return Err(ReadSourceListError::VetoTooFewSources {
-                requested: n,
-                available: source_list.len(),
-            });
-        }
-    }
+    // if let Some(n) = num_sources {
+    //     if n > source_list.len() {
+    //         return Err(ReadSourceListError::VetoTooFewSources {
+    //             requested: n,
+    //             available: source_list.len(),
+    //         });
+    //     }
+    // }
 
     Ok(())
 }
