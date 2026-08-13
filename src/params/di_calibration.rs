@@ -32,7 +32,7 @@ use crate::{
         write::{write_vis, VisTimestep, VisWriteError},
     },
     misc::expensive_op,
-    model::{new_sky_modeller, ModelError},
+    model::{new_sky_modeller, ModelError, SkyModeller},
     solutions::CalSolutionType,
     srclist::SourceList,
     CalibrationSolutions, PROGRESS_BARS,
@@ -761,7 +761,7 @@ fn model_thread_baseline_sharded(
             .map(|(modeller, &(device, offset, count))| {
                 crate::gpu::set_device(device)?;
                 let mut shard = Array2::zeros((num_freqs, count));
-                modeller.model_timestep_with(timestamp, shard.view_mut())?;
+                SkyModeller::model_timestep_with(modeller, timestamp, shard.view_mut())?;
                 Ok((offset, shard))
             })
             .collect();
