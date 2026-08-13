@@ -111,8 +111,7 @@ impl VisSimulateParams {
             dut1,
             modelling_params: ModellingParams {
                 apply_precession,
-                #[cfg(any(feature = "cuda", feature = "hip"))]
-                gpu_devices: vec![0],
+                ..
             },
         } = self;
 

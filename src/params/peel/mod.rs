@@ -255,8 +255,7 @@ impl PeelParams {
             source_list,
             modelling_params: ModellingParams {
                 apply_precession,
-                #[cfg(any(feature = "cuda", feature = "hip"))]
-                gpu_devices: vec![0],
+                ..
             },
             iono_timeblocks,
             iono_time_average_factor,
