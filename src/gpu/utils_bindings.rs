@@ -12,3 +12,13 @@ extern "C" {
         runtime_version: *mut ::std::os::raw::c_int,
     ) -> *const ::std::os::raw::c_char;
 }
+extern "C" {
+    #[doc = " Return the number of CUDA/HIP devices available."]
+    pub fn get_gpu_device_count(
+        device_count: *mut ::std::os::raw::c_int,
+    ) -> *const ::std::os::raw::c_char;
+}
+extern "C" {
+    #[doc = " Set the calling thread's current CUDA/HIP device."]
+    pub fn set_gpu_device(device: ::std::os::raw::c_int) -> *const ::std::os::raw::c_char;
+}

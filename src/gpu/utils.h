@@ -28,6 +28,16 @@ extern "C" {
 const char *get_gpu_device_info(int device, char name[256], int *device_major, int *device_minor,
                                 size_t *total_global_mem, int *driver_version, int *runtime_version);
 
+/**
+ * Return the number of CUDA/HIP devices available.
+ */
+const char *get_gpu_device_count(int *device_count);
+
+/**
+ * Set the calling thread's current CUDA/HIP device.
+ */
+const char *set_gpu_device(int device);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif // __cplusplus

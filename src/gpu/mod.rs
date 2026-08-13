@@ -20,7 +20,9 @@ use std::{
 
 use thiserror::Error;
 
-pub(crate) use utils::get_device_info;
+pub(crate) use utils::{
+    get_device_count, get_device_info, partition_baselines_across_devices, set_device,
+};
 
 // Import Rust bindings to the CUDA/HIP code specific to the precision we're
 // using, and set corresponding compile-time types.
@@ -186,11 +188,17 @@ pub(crate) struct DevicePointer<T> {
 
     /// The number of bytes allocated against `ptr`.
     size: usize,
+
+    /// The CUDA/HIP device this allocation lives on.
+    device: i32,
 }
 
 impl<T> Drop for DevicePointer<T> {
     fn drop(&mut self) {
         if !self.ptr.is_null() {
+            // Best-effort: free on the owning device. Ignoring errors here
+            // matches the previous behaviour of unconditionally calling free.
+            let _ = set_device(self.device);
             unsafe {
                 gpuFree(self.ptr.cast());
             }
@@ -199,6 +207,11 @@ impl<T> Drop for DevicePointer<T> {
 }
 
 impl<T> DevicePointer<T> {
+    /// Device this pointer was allocated on.
+    pub(crate) fn device(&self) -> i32 {
+        self.device
+    }
+
     /// Get a const pointer to the device memory.
     pub(crate) fn get(&self) -> *const T {
         self.ptr as *const T
@@ -219,11 +232,22 @@ impl<T> DevicePointer<T> {
         self.size / std::mem::size_of::<T>()
     }
 
-    /// Allocate a number of bytes on the device.
+    fn ensure_device(&self) -> Result<(), GpuError> {
+        set_device(self.device)
+    }
+
+    /// Allocate a number of bytes on the current device (device 0 by default).
     #[track_caller]
     pub(crate) fn malloc(size: usize) -> Result<DevicePointer<T>, GpuError> {
+        Self::malloc_on(0, size)
+    }
+
+    /// Allocate a number of bytes on `device`.
+    #[track_caller]
+    pub(crate) fn malloc_on(device: i32, size: usize) -> Result<DevicePointer<T>, GpuError> {
+        set_device(device)?;
         if size == 0 {
-            Ok(Self::default())
+            Ok(Self::empty(device))
         } else {
             let mut d_ptr = std::ptr::null_mut();
             unsafe {
@@ -233,7 +257,17 @@ impl<T> DevicePointer<T> {
             Ok(Self {
                 ptr: d_ptr.cast(),
                 size,
+                device,
             })
+        }
+    }
+
+    /// An empty (null) pointer associated with `device` for later realloc/overwrite.
+    pub(crate) fn empty(device: i32) -> Self {
+        Self {
+            ptr: null_mut(),
+            size: 0,
+            device,
         }
     }
 
@@ -248,18 +282,24 @@ impl<T> DevicePointer<T> {
 
         // CUDA/HIP don't provide a realloc, so just make a new `DevicePointer`
         // and swap it with the old one; the old buffer will be dropped.
-        let mut new = Self::malloc(size)?;
+        let mut new = Self::malloc_on(self.device, size)?;
         std::mem::swap(self, &mut new);
         Ok(())
     }
 
-    /// Copy a slice of data to the device. Any type is allowed, and the returned
+    /// Copy a slice of data to device 0. Any type is allowed, and the returned
     /// pointer is to the device memory.
     #[track_caller]
     pub(crate) fn copy_to_device(v: &[T]) -> Result<DevicePointer<T>, GpuError> {
+        Self::copy_to_device_on(0, v)
+    }
+
+    /// Copy a slice of data to `device`.
+    #[track_caller]
+    pub(crate) fn copy_to_device_on(device: i32, v: &[T]) -> Result<DevicePointer<T>, GpuError> {
         let size = std::mem::size_of_val(v);
         unsafe {
-            let mut d_ptr = Self::malloc(size)?;
+            let mut d_ptr = Self::malloc_on(device, size)?;
             gpuMemcpy(
                 d_ptr.get_mut().cast(),
                 v.as_ptr().cast(),
@@ -299,6 +339,7 @@ impl<T> DevicePointer<T> {
             });
         }
 
+        self.ensure_device()?;
         unsafe {
             gpuMemcpy(
                 v.as_mut_ptr().cast(),
@@ -323,6 +364,7 @@ impl<T> DevicePointer<T> {
 
         let size = std::mem::size_of_val(v);
         self.realloc(size)?;
+        self.ensure_device()?;
         unsafe {
             gpuMemcpy(
                 self.get_mut() as *mut c_void,
@@ -343,6 +385,10 @@ impl<T> DevicePointer<T> {
         }
 
         other.realloc(self.size)?;
+        // Device-to-device copy requires both pointers on the same device for
+        // the simple path used here.
+        self.ensure_device()?;
+        set_device(other.device)?;
         unsafe {
             gpuMemcpy(
                 other.get_mut().cast(),
@@ -361,8 +407,9 @@ impl<T> DevicePointer<T> {
         #[cfg(feature = "hip")]
         use hip_sys::hiprt::hipMemset as gpuMemset;
 
-        unsafe {
-            if self.size > 0 {
+        if self.size > 0 {
+            let _ = self.ensure_device();
+            unsafe {
                 gpuMemset(self.get_mut().cast(), 0, self.size);
             }
         }
@@ -386,6 +433,7 @@ impl<T: Default> DevicePointer<T> {
         let mut v: Vec<T> = Vec::default();
         v.resize_with(self.size / std::mem::size_of::<T>(), || T::default());
 
+        self.ensure_device()?;
         unsafe {
             gpuMemcpy(
                 v.as_mut_ptr().cast(),
@@ -405,6 +453,7 @@ impl<T> Default for DevicePointer<T> {
         Self {
             ptr: null_mut(),
             size: 0,
+            device: 0,
         }
     }
 }

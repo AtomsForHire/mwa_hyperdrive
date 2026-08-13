@@ -109,7 +109,11 @@ impl VisSimulateParams {
             beam,
             array_position,
             dut1,
-            modelling_params: ModellingParams { apply_precession },
+            modelling_params: ModellingParams {
+                apply_precession,
+                #[cfg(any(feature = "cuda", feature = "hip"))]
+                gpu_devices: vec![0],
+            },
         } = self;
 
         // Channel for writing simulated visibilities.

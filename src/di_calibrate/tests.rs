@@ -303,6 +303,8 @@ fn get_default_params() -> DiCalParams {
         output_model_vis_params: None,
         modelling_params: ModellingParams {
             apply_precession: true,
+            #[cfg(any(feature = "cuda", feature = "hip"))]
+            gpu_devices: vec![0],
         },
     }
 }

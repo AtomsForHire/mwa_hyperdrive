@@ -50,4 +50,8 @@ pub(crate) struct OutputVisParams {
 
 pub(crate) struct ModellingParams {
     pub(crate) apply_precession: bool,
+    /// CUDA/HIP device indices used for baseline-sharded sky modelling.
+    /// Empty means use device 0 only. Ignored when modelling on the CPU.
+    #[cfg(any(feature = "cuda", feature = "hip"))]
+    pub(crate) gpu_devices: Vec<i32>,
 }

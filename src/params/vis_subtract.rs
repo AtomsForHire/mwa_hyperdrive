@@ -44,7 +44,11 @@ impl VisSubtractParams {
             output_vis_params,
             beam,
             source_list,
-            modelling_params: ModellingParams { apply_precession },
+            modelling_params: ModellingParams {
+                apply_precession,
+                #[cfg(any(feature = "cuda", feature = "hip"))]
+                gpu_devices: vec![0],
+            },
         } = self;
 
         // Are we going to write out simulated auto-correlations? Use this

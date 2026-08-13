@@ -30,6 +30,9 @@ use crate::{
 /// second is the source component. The length of `hadecs`, `lmns`,
 /// `*_list_fds`'s second axis are the same.
 pub struct SkyModellerGpu<'a> {
+    /// CUDA/HIP device this modeller's buffers live on.
+    device_id: i32,
+
     /// The trait object to use for beam calculations.
     gpu_beam: Box<dyn BeamGpu>,
 
@@ -50,7 +53,12 @@ pub struct SkyModellerGpu<'a> {
     /// The *unprecessed* [`XyzGeodetic`] positions of each of the unflagged
     /// tiles.
     unflagged_tile_xyzs: &'a [XyzGeodetic],
+    /// Total number of unflagged tiles (for global baseline→tile decode).
+    num_tiles: i32,
+    /// Number of baselines modelled by this instance (full array or a shard).
     num_baselines: i32,
+    /// Global baseline index of the first baseline in this modeller's shard.
+    baseline_offset: i32,
     num_freqs: i32,
 
     pols: Polarisations,
@@ -160,6 +168,46 @@ impl<'a> SkyModellerGpu<'a> {
         dut1: Duration,
         apply_precession: bool,
     ) -> Result<SkyModellerGpu<'a>, ModelError> {
+        Self::new_on_device(
+            beam,
+            source_list,
+            pols,
+            unflagged_tile_xyzs,
+            unflagged_fine_chan_freqs,
+            flagged_tiles,
+            phase_centre,
+            array_longitude_rad,
+            array_latitude_rad,
+            dut1,
+            apply_precession,
+            0,
+            0,
+            None,
+        )
+    }
+
+    /// Create a modeller bound to `device_id`, optionally modelling only a
+    /// contiguous baseline shard `[baseline_offset, baseline_offset + num_baselines)`.
+    ///
+    /// When `num_baselines` is `None`, the full baseline set is modelled.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_on_device(
+        beam: &dyn Beam,
+        source_list: &SourceList,
+        pols: Polarisations,
+        unflagged_tile_xyzs: &'a [XyzGeodetic],
+        unflagged_fine_chan_freqs: &'a [f64],
+        flagged_tiles: &HashSet<usize>,
+        phase_centre: RADec,
+        array_longitude_rad: f64,
+        array_latitude_rad: f64,
+        dut1: Duration,
+        apply_precession: bool,
+        device_id: i32,
+        baseline_offset: usize,
+        num_baselines: Option<usize>,
+    ) -> Result<SkyModellerGpu<'a>, ModelError> {
+        gpu::set_device(device_id)?;
         let mut point_power_law_radecs: Vec<RADec> = vec![];
         let mut point_power_law_lmns: Vec<gpu::LmnRime> = vec![];
         let mut point_power_law_fds: Vec<_> = vec![];
@@ -410,11 +458,24 @@ impl<'a> SkyModellerGpu<'a> {
             .map(|&f| f as GpuFloat)
             .collect();
 
-        let num_baselines = (unflagged_tile_xyzs.len() * (unflagged_tile_xyzs.len() - 1)) / 2;
+        let total_num_baselines =
+            (unflagged_tile_xyzs.len() * (unflagged_tile_xyzs.len() - 1)) / 2;
+        let num_baselines = num_baselines.unwrap_or(total_num_baselines);
+        if baseline_offset > total_num_baselines
+            || baseline_offset + num_baselines > total_num_baselines
+        {
+            panic!(
+                "baseline shard [{baseline_offset}, {}) exceeds total baselines {total_num_baselines}",
+                baseline_offset + num_baselines
+            );
+        }
         let num_freqs = unflagged_fine_chan_freqs.len();
+        let num_tiles = unflagged_tile_xyzs.len();
 
-        let d_freqs = DevicePointer::copy_to_device(&unflagged_fine_chan_freqs_floats)?;
-        let d_shapelet_basis_values = DevicePointer::copy_to_device(&shapelet_basis_values)?;
+        let d_freqs =
+            DevicePointer::copy_to_device_on(device_id, &unflagged_fine_chan_freqs_floats)?;
+        let d_shapelet_basis_values =
+            DevicePointer::copy_to_device_on(device_id, &shapelet_basis_values)?;
 
         let mut tile_index_to_unflagged_tile_index_map: Vec<i32> =
             Vec::with_capacity(unflagged_tile_xyzs.len());
@@ -428,9 +489,12 @@ impl<'a> SkyModellerGpu<'a> {
             i_unflagged_tile += 1;
         }
         let d_tile_index_to_unflagged_tile_index_map =
-            DevicePointer::copy_to_device(&tile_index_to_unflagged_tile_index_map)?;
+            DevicePointer::copy_to_device_on(device_id, &tile_index_to_unflagged_tile_index_map)?;
+
+        let empty = || DevicePointer::empty(device_id);
 
         let mut modeller = SkyModellerGpu {
+            device_id,
             gpu_beam: beam.prepare_gpu_beam(&unflagged_fine_chan_freqs_ints)?,
 
             phase_centre,
@@ -440,7 +504,11 @@ impl<'a> SkyModellerGpu<'a> {
             precess: apply_precession,
 
             unflagged_tile_xyzs,
+            num_tiles: num_tiles.try_into().expect("not bigger than i32::MAX"),
             num_baselines: num_baselines.try_into().expect("not bigger than i32::MAX"),
+            baseline_offset: baseline_offset
+                .try_into()
+                .expect("not bigger than i32::MAX"),
             num_freqs: num_freqs.try_into().expect("not bigger than i32::MAX"),
 
             pols,
@@ -452,61 +520,61 @@ impl<'a> SkyModellerGpu<'a> {
             d_shapelet_basis_values,
 
             point_power_law_radecs: vec![],
-            point_power_law_lmns: DevicePointer::default(),
-            point_power_law_fds: DevicePointer::default(),
-            point_power_law_sis: DevicePointer::default(),
+            point_power_law_lmns: empty(),
+            point_power_law_fds: empty(),
+            point_power_law_sis: empty(),
 
             point_curved_power_law_radecs: vec![],
-            point_curved_power_law_lmns: DevicePointer::default(),
-            point_curved_power_law_fds: DevicePointer::default(),
-            point_curved_power_law_sis: DevicePointer::default(),
-            point_curved_power_law_qs: DevicePointer::default(),
+            point_curved_power_law_lmns: empty(),
+            point_curved_power_law_fds: empty(),
+            point_curved_power_law_sis: empty(),
+            point_curved_power_law_qs: empty(),
 
             point_list_radecs: vec![],
-            point_list_lmns: DevicePointer::default(),
-            point_list_fds: DevicePointer::default(),
+            point_list_lmns: empty(),
+            point_list_fds: empty(),
 
             gaussian_power_law_radecs: vec![],
-            gaussian_power_law_lmns: DevicePointer::default(),
-            gaussian_power_law_fds: DevicePointer::default(),
-            gaussian_power_law_sis: DevicePointer::default(),
-            gaussian_power_law_gps: DevicePointer::default(),
+            gaussian_power_law_lmns: empty(),
+            gaussian_power_law_fds: empty(),
+            gaussian_power_law_sis: empty(),
+            gaussian_power_law_gps: empty(),
 
             gaussian_curved_power_law_radecs: vec![],
-            gaussian_curved_power_law_lmns: DevicePointer::default(),
-            gaussian_curved_power_law_fds: DevicePointer::default(),
-            gaussian_curved_power_law_sis: DevicePointer::default(),
-            gaussian_curved_power_law_qs: DevicePointer::default(),
-            gaussian_curved_power_law_gps: DevicePointer::default(),
+            gaussian_curved_power_law_lmns: empty(),
+            gaussian_curved_power_law_fds: empty(),
+            gaussian_curved_power_law_sis: empty(),
+            gaussian_curved_power_law_qs: empty(),
+            gaussian_curved_power_law_gps: empty(),
 
             gaussian_list_radecs: vec![],
-            gaussian_list_lmns: DevicePointer::default(),
-            gaussian_list_fds: DevicePointer::default(),
-            gaussian_list_gps: DevicePointer::default(),
+            gaussian_list_lmns: empty(),
+            gaussian_list_fds: empty(),
+            gaussian_list_gps: empty(),
 
             shapelet_power_law_radecs: vec![],
-            shapelet_power_law_lmns: DevicePointer::default(),
-            shapelet_power_law_fds: DevicePointer::default(),
-            shapelet_power_law_sis: DevicePointer::default(),
-            shapelet_power_law_gps: DevicePointer::default(),
-            shapelet_power_law_coeffs: DevicePointer::default(),
-            shapelet_power_law_coeff_lens: DevicePointer::default(),
+            shapelet_power_law_lmns: empty(),
+            shapelet_power_law_fds: empty(),
+            shapelet_power_law_sis: empty(),
+            shapelet_power_law_gps: empty(),
+            shapelet_power_law_coeffs: empty(),
+            shapelet_power_law_coeff_lens: empty(),
 
             shapelet_curved_power_law_radecs: vec![],
-            shapelet_curved_power_law_lmns: DevicePointer::default(),
-            shapelet_curved_power_law_fds: DevicePointer::default(),
-            shapelet_curved_power_law_sis: DevicePointer::default(),
-            shapelet_curved_power_law_qs: DevicePointer::default(),
-            shapelet_curved_power_law_gps: DevicePointer::default(),
-            shapelet_curved_power_law_coeffs: DevicePointer::default(),
-            shapelet_curved_power_law_coeff_lens: DevicePointer::default(),
+            shapelet_curved_power_law_lmns: empty(),
+            shapelet_curved_power_law_fds: empty(),
+            shapelet_curved_power_law_sis: empty(),
+            shapelet_curved_power_law_qs: empty(),
+            shapelet_curved_power_law_gps: empty(),
+            shapelet_curved_power_law_coeffs: empty(),
+            shapelet_curved_power_law_coeff_lens: empty(),
 
             shapelet_list_radecs: vec![],
-            shapelet_list_lmns: DevicePointer::default(),
-            shapelet_list_fds: DevicePointer::default(),
-            shapelet_list_gps: DevicePointer::default(),
-            shapelet_list_coeffs: DevicePointer::default(),
-            shapelet_list_coeff_lens: DevicePointer::default(),
+            shapelet_list_lmns: empty(),
+            shapelet_list_fds: empty(),
+            shapelet_list_gps: empty(),
+            shapelet_list_coeffs: empty(),
+            shapelet_list_coeff_lens: empty(),
         };
         modeller.update_source_list(
             source_list
@@ -1110,11 +1178,23 @@ impl<'a> SkyModellerGpu<'a> {
         };
 
         let uvs = self.get_shapelet_uvs(lst_rad);
-        let power_law_uvs =
-            DevicePointer::copy_to_device(uvs.power_law.as_slice().expect("is contiguous"))?;
-        let curved_power_law_uvs =
-            DevicePointer::copy_to_device(uvs.curved_power_law.as_slice().expect("is contiguous"))?;
-        let list_uvs = DevicePointer::copy_to_device(uvs.list.as_slice().expect("is contiguous"))?;
+        let bl0 = self.baseline_offset as usize;
+        let bl1 = bl0 + self.num_baselines as usize;
+        let power_law = uvs.power_law.slice(s![bl0..bl1, ..]).into_owned();
+        let curved_power_law = uvs.curved_power_law.slice(s![bl0..bl1, ..]).into_owned();
+        let list = uvs.list.slice(s![bl0..bl1, ..]).into_owned();
+        let power_law_uvs = DevicePointer::copy_to_device_on(
+            self.device_id,
+            power_law.as_slice().expect("is contiguous"),
+        )?;
+        let curved_power_law_uvs = DevicePointer::copy_to_device_on(
+            self.device_id,
+            curved_power_law.as_slice().expect("is contiguous"),
+        )?;
+        let list_uvs = DevicePointer::copy_to_device_on(
+            self.device_id,
+            list.as_slice().expect("is contiguous"),
+        )?;
 
         gpu_kernel_call!(
             gpu::model_shapelets,
@@ -1179,6 +1259,7 @@ impl<'a> SkyModellerGpu<'a> {
         d_beam_jones: &mut DevicePointer<GpuJones>,
         d_vis_fb: &mut DevicePointer<Jones<f32>>,
     ) -> Result<(), ModelError> {
+        gpu::set_device(self.device_id)?;
         unsafe {
             self.model_points(lst_rad, array_latitude_rad, d_uvws, d_beam_jones, d_vis_fb)?;
             self.model_gaussians(lst_rad, array_latitude_rad, d_uvws, d_beam_jones, d_vis_fb)?;
@@ -1198,6 +1279,7 @@ impl<'a> SkyModellerGpu<'a> {
         d_beam_jones: &mut DevicePointer<GpuJones>,
         d_vis_fb: &mut DevicePointer<Jones<f32>>,
     ) -> Result<(), ModelError> {
+        gpu::set_device(self.device_id)?;
         // Number of tiles and freqs
         let num_tiles = self.unflagged_tile_xyzs.len();
         let num_freqs = self.freqs.len();
@@ -1426,6 +1508,8 @@ impl<'a> SkyModellerGpu<'a> {
         let uvws = xyzs_to_cross_uvws(&xyzs, self.phase_centre.to_hadec(lst));
         let gpu_uvws: Vec<gpu::UVW> = uvws
             .iter()
+            .skip(self.baseline_offset as usize)
+            .take(self.num_baselines as usize)
             .map(|&uvw| gpu::UVW {
                 u: uvw.u as GpuFloat,
                 v: uvw.v as GpuFloat,
@@ -1443,6 +1527,8 @@ impl<'a> SkyModellerGpu<'a> {
             num_freqs: self.num_freqs,
             num_vis: self.num_baselines * self.num_freqs,
             num_baselines: self.num_baselines,
+            num_tiles: self.num_tiles,
+            baseline_offset: self.baseline_offset,
             d_freqs: self.d_freqs.get(),
             d_shapelet_basis_values: self.d_shapelet_basis_values.get(),
             num_unique_beam_freqs: self.gpu_beam.get_num_unique_freqs(),
@@ -1488,13 +1574,15 @@ impl<'a> SkyModeller<'a> for SkyModellerGpu<'a> {
         timestamp: Epoch,
     ) -> Result<(Array2<Jones<f32>>, Vec<UVW>), ModelError> {
         // The device buffers will automatically be resized.
-        let mut d_uvws = DevicePointer::default();
+        let mut d_uvws = DevicePointer::empty(self.device_id);
         let (lst, uvws, latitude) = self.get_lst_uvws_latitude(timestamp, &mut d_uvws)?;
 
         let mut vis_fb = Array2::zeros((self.num_freqs as usize, self.num_baselines as usize));
-        let mut d_vis_fb =
-            DevicePointer::copy_to_device(vis_fb.as_slice().expect("is contiguous"))?;
-        let mut d_beam_jones = DevicePointer::default();
+        let mut d_vis_fb = DevicePointer::copy_to_device_on(
+            self.device_id,
+            vis_fb.as_slice().expect("is contiguous"),
+        )?;
+        let mut d_beam_jones = DevicePointer::empty(self.device_id);
 
         self.model_timestep_with(lst, latitude, &d_uvws, &mut d_beam_jones, &mut d_vis_fb)?;
         d_vis_fb.copy_from_device(vis_fb.as_slice_mut().expect("is contiguous"))?;
@@ -1508,12 +1596,20 @@ impl<'a> SkyModeller<'a> for SkyModellerGpu<'a> {
         mut vis_fb: ArrayViewMut2<Jones<f32>>,
     ) -> Result<Vec<UVW>, ModelError> {
         // The device buffers will automatically be resized.
-        let mut d_uvws = DevicePointer::default();
+        let mut d_uvws = DevicePointer::empty(self.device_id);
         let (lst, uvws, latitude) = self.get_lst_uvws_latitude(timestamp, &mut d_uvws)?;
 
-        let mut d_vis_fb =
-            DevicePointer::copy_to_device(vis_fb.as_slice().expect("is contiguous"))?;
-        let mut d_beam_jones = DevicePointer::default();
+        assert_eq!(
+            vis_fb.dim(),
+            (self.num_freqs as usize, self.num_baselines as usize),
+            "vis buffer must match this modeller's frequency × baseline-shard shape"
+        );
+
+        let mut d_vis_fb = DevicePointer::copy_to_device_on(
+            self.device_id,
+            vis_fb.as_slice().expect("is contiguous"),
+        )?;
+        let mut d_beam_jones = DevicePointer::empty(self.device_id);
 
         self.model_timestep_with(lst, latitude, &d_uvws, &mut d_beam_jones, &mut d_vis_fb)?;
         d_vis_fb.copy_from_device(vis_fb.as_slice_mut().expect("is contiguous"))?;
@@ -1538,12 +1634,14 @@ impl<'a> SkyModeller<'a> for SkyModellerGpu<'a> {
         mut vis_fb: ArrayViewMut2<Jones<f32>>,
     ) -> Result<(), ModelError> {
         // The device buffers will automatically be resized.
-        let mut d_uvws = DevicePointer::default();
+        let mut d_uvws = DevicePointer::empty(self.device_id);
         let (lst, _, latitude) = self.get_lst_uvws_latitude(timestamp, &mut d_uvws)?;
 
-        let mut d_vis_fb =
-            DevicePointer::copy_to_device(vis_fb.as_slice().expect("is contiguous"))?;
-        let mut d_beam_jones = DevicePointer::default();
+        let mut d_vis_fb = DevicePointer::copy_to_device_on(
+            self.device_id,
+            vis_fb.as_slice().expect("is contiguous"),
+        )?;
+        let mut d_beam_jones = DevicePointer::empty(self.device_id);
 
         self.model_timestep_autos_with_inner(lst, latitude, &mut d_beam_jones, &mut d_vis_fb)?;
         d_vis_fb.copy_from_device(vis_fb.as_slice_mut().expect("is contiguous"))?;

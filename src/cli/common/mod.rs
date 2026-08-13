@@ -558,7 +558,7 @@ impl SkyModelWithVetoArgs {
     }
 }
 
-#[derive(Parser, Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[derive(Parser, Debug, Clone, Default, Serialize, Deserialize)]
 pub(super) struct ModellingArgs {
     /// If specified, don't precess the array to J2000. We assume that sky-model
     /// sources are specified in the J2000 epoch.
@@ -572,6 +572,14 @@ pub(super) struct ModellingArgs {
     #[clap(long, help_heading = "MODELLING")]
     #[serde(default)]
     pub(super) cpu: bool,
+
+    /// Comma-separated CUDA/HIP device indices for baseline-sharded sky
+    /// modelling (e.g. `0,1`). Each device models a disjoint baseline shard so
+    /// peak VRAM scales roughly as 1/N. Default: device 0 only.
+    #[cfg(any(feature = "cuda", feature = "hip"))]
+    #[clap(long, value_delimiter = ',', help_heading = "MODELLING")]
+    #[serde(default)]
+    pub(super) gpu_devices: Vec<i32>,
 }
 
 impl ModellingArgs {
@@ -580,6 +588,12 @@ impl ModellingArgs {
             no_precession: self.no_precession || other.no_precession,
             #[cfg(any(feature = "cuda", feature = "hip"))]
             cpu: self.cpu || other.cpu,
+            #[cfg(any(feature = "cuda", feature = "hip"))]
+            gpu_devices: if other.gpu_devices.is_empty() {
+                self.gpu_devices
+            } else {
+                other.gpu_devices
+            },
         }
     }
 
@@ -588,6 +602,8 @@ impl ModellingArgs {
             no_precession,
             #[cfg(any(feature = "cuda", feature = "hip"))]
             cpu,
+            #[cfg(any(feature = "cuda", feature = "hip"))]
+            gpu_devices,
         } = self;
 
         #[cfg(any(feature = "cuda", feature = "hip"))]
@@ -607,44 +623,73 @@ impl ModellingArgs {
             #[cfg(any(feature = "cuda", feature = "hip"))]
             ModelDevice::Gpu => {
                 block.push(format!("Using GPU with {} precision", d.get_precision()).into());
-                let (device_info, driver_info) = match crate::gpu::get_device_info() {
-                    Ok(i) => i,
+                let devices = if gpu_devices.is_empty() {
+                    vec![0]
+                } else {
+                    gpu_devices.clone()
+                };
+                let device_count = match crate::gpu::get_device_count() {
+                    Ok(c) => c,
                     Err(e) => {
-                        // For some reason, despite hyperdrive being compiled
-                        // with the "cuda" or "hip" feature, we failed to get
-                        // the device info. Maybe there's no GPU present. Either
-                        // way, we cannot continue. I'd rather not have error
-                        // handling here because (1) without the "cuda" or "hip"
-                        // feature, this function will never fail on the CPU
-                        // path, so adding error handling means the caller would
-                        // have to handle a `Result` uselessly and (2) if this
-                        // "petty" display function fails, then we can't use the
-                        // GPU for real work anyway.
                         #[cfg(feature = "cuda")]
-                        eprintln!("Couldn't retrieve CUDA device info for device 0, is a device present? {e}");
+                        eprintln!("Couldn't retrieve CUDA device count, is a device present? {e}");
                         #[cfg(feature = "hip")]
-                        eprintln!("Couldn't retrieve HIP device info for device 0, is a device present? {e}");
+                        eprintln!("Couldn't retrieve HIP device count, is a device present? {e}");
                         std::process::exit(1);
                     }
                 };
-                #[cfg(feature = "cuda")]
-                let device_type = "CUDA";
-                #[cfg(feature = "hip")]
-                let device_type = "HIP";
-                block.push(
-                    format!(
-                        "{device_type} device: {} (capability {}, {} MiB)",
-                        device_info.name, device_info.capability, device_info.total_global_mem
-                    )
-                    .into(),
-                );
-                block.push(
-                    format!(
-                        "{device_type} driver: {}, runtime: {}",
-                        driver_info.driver_version, driver_info.runtime_version
-                    )
-                    .into(),
-                );
+                for &device in &devices {
+                    if device < 0 || device >= device_count {
+                        eprintln!(
+                            "Requested GPU device {device} is out of range (found {device_count} device(s))"
+                        );
+                        std::process::exit(1);
+                    }
+                    let (device_info, driver_info) = match crate::gpu::get_device_info(device) {
+                        Ok(i) => i,
+                        Err(e) => {
+                            #[cfg(feature = "cuda")]
+                            eprintln!(
+                                "Couldn't retrieve CUDA device info for device {device}, is a device present? {e}"
+                            );
+                            #[cfg(feature = "hip")]
+                            eprintln!(
+                                "Couldn't retrieve HIP device info for device {device}, is a device present? {e}"
+                            );
+                            std::process::exit(1);
+                        }
+                    };
+                    #[cfg(feature = "cuda")]
+                    let device_type = "CUDA";
+                    #[cfg(feature = "hip")]
+                    let device_type = "HIP";
+                    block.push(
+                        format!(
+                            "{device_type} device {device}: {} (capability {}, {} MiB)",
+                            device_info.name, device_info.capability, device_info.total_global_mem
+                        )
+                        .into(),
+                    );
+                    if device == devices[0] {
+                        block.push(
+                            format!(
+                                "{device_type} driver: {}, runtime: {}",
+                                driver_info.driver_version, driver_info.runtime_version
+                            )
+                            .into(),
+                        );
+                    }
+                }
+                if devices.len() > 1 {
+                    block.push(
+                        format!(
+                            "Baseline-sharded modelling across {} GPUs: {:?}",
+                            devices.len(),
+                            devices
+                        )
+                        .into(),
+                    );
+                }
             }
         }
         printer.push_block(block);
@@ -652,6 +697,15 @@ impl ModellingArgs {
 
         ModellingParams {
             apply_precession: !no_precession,
+            #[cfg(any(feature = "cuda", feature = "hip"))]
+            gpu_devices: {
+                let _ = ();
+                if cpu || gpu_devices.is_empty() {
+                    vec![0]
+                } else {
+                    gpu_devices
+                }
+            },
         }
     }
 }

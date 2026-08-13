@@ -241,7 +241,9 @@ impl PeelArgs {
             Some(obs_context.input_data_type),
             None,
         )?;
-        let modelling_params @ ModellingParams { apply_precession } = model_args.parse();
+        let modelling_params @ ModellingParams {
+            apply_precession, ..
+        } = model_args.parse();
 
         let LatLngHeight {
             longitude_rad,

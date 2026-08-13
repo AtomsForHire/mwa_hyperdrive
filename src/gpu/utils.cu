@@ -15,6 +15,7 @@
 #define gpuDeviceProp          hipDeviceProp_t
 #define gpuError_t             hipError_t
 #define gpuDriverGetVersion    hipDriverGetVersion
+#define gpuGetDeviceCount      hipGetDeviceCount
 #define gpuGetDeviceProperties hipGetDeviceProperties
 #define gpuGetErrorString      hipGetErrorString
 #define gpuRuntimeGetVersion   hipRuntimeGetVersion
@@ -26,6 +27,7 @@
 #define gpuDeviceProp          cudaDeviceProp
 #define gpuError_t             cudaError_t
 #define gpuDriverGetVersion    cudaDriverGetVersion
+#define gpuGetDeviceCount      cudaGetDeviceCount
 #define gpuGetDeviceProperties cudaGetDeviceProperties
 #define gpuGetErrorString      cudaGetErrorString
 #define gpuRuntimeGetVersion   cudaRuntimeGetVersion
@@ -64,5 +66,19 @@ extern "C" const char *get_gpu_device_info(int device, char name[256], int *devi
     if (error_id != gpuSuccess)
         return gpuGetErrorString(error_id);
 
+    return NULL;
+}
+
+extern "C" const char *get_gpu_device_count(int *device_count) {
+    gpuError_t error_id = gpuGetDeviceCount(device_count);
+    if (error_id != gpuSuccess)
+        return gpuGetErrorString(error_id);
+    return NULL;
+}
+
+extern "C" const char *set_gpu_device(int device) {
+    gpuError_t error_id = gpuSetDevice(device);
+    if (error_id != gpuSuccess)
+        return gpuGetErrorString(error_id);
     return NULL;
 }

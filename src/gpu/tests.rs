@@ -44,6 +44,7 @@ fn copy_from_non_existent_pointer_fails() {
     let d_ptr: DevicePointer<u8> = DevicePointer {
         ptr: std::ptr::null_mut::<u8>(),
         size: 1,
+        device: 0,
     };
     let mut dest = [0; 100];
     let result = d_ptr.copy_from_device(&mut dest);

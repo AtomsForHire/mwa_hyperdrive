@@ -46,19 +46,19 @@ pub struct IncompleteSolutions<'a> {
     pub(crate) di_jones: Array3<Jones<f64>>,
 
     /// The timeblocks used in calibration.
-    timeblocks: &'a Vec1<Timeblock>,
+    pub(crate) timeblocks: &'a Vec1<Timeblock>,
 
     /// The unflagged chanblocks used in calibration.
-    chanblocks: &'a [Chanblock],
+    pub(crate) chanblocks: &'a [Chanblock],
 
     /// The maximum allowed number of iterations during calibration.
-    max_iterations: u32,
+    pub(crate) max_iterations: u32,
 
     /// The stop threshold used during calibration.
-    stop_threshold: f64,
+    pub(crate) stop_threshold: f64,
 
     /// The minimum threshold used during calibration.
-    min_threshold: f64,
+    pub(crate) min_threshold: f64,
 }
 
 impl IncompleteSolutions<'_> {

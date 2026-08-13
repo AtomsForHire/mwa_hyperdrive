@@ -26,7 +26,7 @@ use crate::{
     averaging::Timeblock,
     beam::Beam,
     context::Polarisations,
-    di_calibrate::calibrate_timeblocks,
+    di_calibrate::{calibrate_timeblocks, IncompleteSolutions},
     io::{
         read::VisReadError,
         write::{write_vis, VisTimestep, VisWriteError},
@@ -114,44 +114,108 @@ impl DiCalParams {
     /// Use the [`DiCalParams`] to perform calibration and obtain solutions.
     pub(crate) fn run(&self) -> Result<CalibrationSolutions, DiCalibrateError> {
         let input_vis_params = &self.input_vis_params;
-
-        let CalVis {
-            vis_data,
-            vis_weights,
-            vis_model,
-            pols,
-        } = self.get_cal_vis()?;
-        assert_eq!(vis_weights.len_of(Axis(2)), self.baseline_weights.len());
-
-        // The shape of the array containing output Jones matrices.
-        let num_timeblocks = input_vis_params.timeblocks.len();
+        let num_cal_timeblocks = self.cal_timeblocks.len();
         let num_chanblocks = input_vis_params.spw.chanblocks.len();
         let num_unflagged_tiles = input_vis_params.get_num_unflagged_tiles();
 
         if log_enabled!(Debug) {
-            let shape = (num_timeblocks, num_unflagged_tiles, num_chanblocks);
+            let shape = (num_cal_timeblocks, num_unflagged_tiles, num_chanblocks);
             debug!(
-            "Shape of DI Jones matrices array: ({} timeblocks, {} tiles, {} chanblocks; {} MiB)",
-            shape.0,
-            shape.1,
-            shape.2,
-            shape.0 * shape.1 * shape.2 * std::mem::size_of::<Jones<f64>>()
-            // 1024 * 1024 == 1 MiB.
-            / 1024 / 1024
-        );
+                "Shape of DI Jones matrices array: ({} timeblocks, {} tiles, {} chanblocks; {} MiB)",
+                shape.0,
+                shape.1,
+                shape.2,
+                shape.0 * shape.1 * shape.2 * std::mem::size_of::<Jones<f64>>()
+                // 1024 * 1024 == 1 MiB.
+                / 1024 / 1024
+            );
         }
 
-        let (sols, results) = calibrate_timeblocks(
-            vis_data.view(),
-            vis_model.view(),
-            &self.cal_timeblocks,
-            &input_vis_params.spw.chanblocks,
-            self.max_iterations,
-            self.stop_threshold,
-            self.min_threshold,
-            pols,
-            true,
-        );
+        // Stream one calibration timeblock at a time when that reduces peak host
+        // RAM (multiple cal timeblocks) and we are not also writing model vis
+        // (writer expects a single continuous model stream).
+        let stream_cal_timeblocks =
+            self.cal_timeblocks.len() > 1 && self.output_model_vis_params.is_none();
+
+        let (sols, results) = if stream_cal_timeblocks {
+            info!(
+                "Streaming {} calibration timeblocks to limit peak host memory",
+                self.cal_timeblocks.len()
+            );
+            let shape = (num_cal_timeblocks, num_unflagged_tiles, num_chanblocks);
+            let mut di_jones = Array3::from_elem(shape, Jones::identity());
+            let mut all_cal_results = Vec::with_capacity(num_cal_timeblocks * num_chanblocks);
+
+            for cal_tb in &self.cal_timeblocks {
+                info!(
+                    "Loading data and model for calibration timeblock {}/{}",
+                    cal_tb.index + 1,
+                    num_cal_timeblocks
+                );
+                let cal_vis = self.get_cal_vis_for_input_range(cal_tb.range.clone())?;
+                assert_eq!(cal_vis.vis_weights.len_of(Axis(2)), self.baseline_weights.len());
+
+                let local_tb = Timeblock {
+                    index: 0,
+                    range: 0..cal_vis.vis_data.len_of(Axis(0)),
+                    timestamps: cal_tb.timestamps.clone(),
+                    timesteps: cal_tb.timesteps.clone(),
+                    median: cal_tb.median,
+                };
+                let local_tbs = Vec1::new(local_tb);
+                let (incomplete, results) = calibrate_timeblocks(
+                    cal_vis.vis_data.view(),
+                    cal_vis.vis_model.view(),
+                    &local_tbs,
+                    &input_vis_params.spw.chanblocks,
+                    self.max_iterations,
+                    self.stop_threshold,
+                    self.min_threshold,
+                    cal_vis.pols,
+                    true,
+                );
+                di_jones
+                    .slice_mut(s![cal_tb.index, .., ..])
+                    .assign(&incomplete.di_jones.slice(s![0, .., ..]));
+                all_cal_results.append(&mut results.into_raw_vec_and_offset().0);
+            }
+
+            let cal_results = Array2::from_shape_vec(
+                (num_cal_timeblocks, num_chanblocks),
+                all_cal_results,
+            )
+            .expect("cal results length matches timeblocks × chanblocks");
+
+            let incomplete = IncompleteSolutions {
+                di_jones,
+                timeblocks: &self.cal_timeblocks,
+                chanblocks: &input_vis_params.spw.chanblocks,
+                max_iterations: self.max_iterations,
+                stop_threshold: self.stop_threshold,
+                min_threshold: self.min_threshold,
+            };
+            (incomplete, cal_results)
+        } else {
+            let CalVis {
+                vis_data,
+                vis_weights,
+                vis_model,
+                pols,
+            } = self.get_cal_vis()?;
+            assert_eq!(vis_weights.len_of(Axis(2)), self.baseline_weights.len());
+
+            calibrate_timeblocks(
+                vis_data.view(),
+                vis_model.view(),
+                &self.cal_timeblocks,
+                &input_vis_params.spw.chanblocks,
+                self.max_iterations,
+                self.stop_threshold,
+                self.min_threshold,
+                pols,
+                true,
+            )
+        };
 
         // "Complete" the solutions.
         let sols = sols.into_cal_sols(self, Some(results.map(|r| r.max_precision)));
@@ -160,9 +224,25 @@ impl DiCalParams {
     }
 
     /// For calibration, read in unflagged visibilities and generate sky-model
-    /// visibilities.
+    /// visibilities for all selected input timeblocks.
     pub(crate) fn get_cal_vis(&self) -> Result<CalVis, DiCalibrateError> {
+        self.get_cal_vis_for_input_range(0..self.input_vis_params.timeblocks.len())
+    }
+
+    /// Like [`Self::get_cal_vis`], but only for a contiguous range of indices
+    /// into [`InputVisParams::timeblocks`]. Used to stream calibration
+    /// timeblocks and limit peak host memory.
+    pub(crate) fn get_cal_vis_for_input_range(
+        &self,
+        input_time_range: std::ops::Range<usize>,
+    ) -> Result<CalVis, DiCalibrateError> {
         let input_vis_params = &self.input_vis_params;
+        let selected_timeblocks = &input_vis_params.timeblocks[input_time_range.clone()];
+        if selected_timeblocks.is_empty() {
+            return Err(DiCalibrateError::InsufficientMemory {
+                need_gib: indicatif::HumanBytes(0),
+            });
+        }
 
         // Are we going to write out simulated auto-correlations? Use this
         // variable so the rest of the code is clearer.
@@ -181,11 +261,7 @@ impl DiCalParams {
         let num_unflagged_cross_baselines = (num_unflagged_tiles * (num_unflagged_tiles - 1)) / 2;
 
         let vis_shape = (
-            input_vis_params
-                .timeblocks
-                .iter()
-                .flat_map(|t| &t.timestamps)
-                .count(),
+            selected_timeblocks.len(),
             input_vis_params.spw.chanblocks.len(),
             num_unflagged_cross_baselines,
         );
@@ -255,7 +331,7 @@ impl DiCalParams {
         } else {
             ProgressDrawTarget::hidden()
         });
-        let pb = ProgressBar::new(input_vis_params.timeblocks.len() as _)
+        let pb = ProgressBar::new(selected_timeblocks.len() as _)
         .with_style(
             ProgressStyle::default_bar()
                 .template("{msg:17}: [{wide_bar:.blue}] {pos:2}/{len:2} timesteps ({elapsed_precise}<{eta_precise})").unwrap()
@@ -264,7 +340,7 @@ impl DiCalParams {
         .with_position(0)
         .with_message("Reading data");
         let read_progress = multi_progress.add(pb);
-        let pb = ProgressBar::new(input_vis_params.timeblocks.len() as _)
+        let pb = ProgressBar::new(selected_timeblocks.len() as _)
         .with_style(
             ProgressStyle::default_bar()
                 .template("{msg:17}: [{wide_bar:.blue}] {pos:2}/{len:2} timesteps ({elapsed_precise}<{eta_precise})").unwrap()
@@ -306,7 +382,7 @@ impl DiCalParams {
                     read_progress.tick();
 
                     for (timeblock, vis_data_fb, vis_weights_fb) in izip!(
-                        &input_vis_params.timeblocks,
+                        selected_timeblocks,
                         vis_data_slices,
                         vis_weight_slices
                     ) {
@@ -350,7 +426,8 @@ impl DiCalParams {
                         &*self.beam,
                         &self.source_list,
                         input_vis_params,
-                        self.modelling_params.apply_precession,
+                        &self.modelling_params,
+                        selected_timeblocks,
                         using_autos,
                         vis_model_slices,
                         tx_model,
@@ -465,13 +542,15 @@ fn model_thread(
     beam: &dyn Beam,
     source_list: &SourceList,
     input_vis_params: &InputVisParams,
-    apply_precession: bool,
+    modelling_params: &ModellingParams,
+    selected_timeblocks: &[Timeblock],
     model_autos: bool,
     vis_model_slices: AxisIterMut<'_, Jones<f32>, Ix2>,
     tx: Sender<VisTimestep>,
     error: &AtomicCell<bool>,
     progress_bar: ProgressBar,
 ) -> Result<(), ModelError> {
+    let apply_precession = modelling_params.apply_precession;
     let obs_context = input_vis_params.get_obs_context();
     let unflagged_tile_xyzs = obs_context
         .tile_xyzs
@@ -491,6 +570,49 @@ fn model_thread(
         .iter()
         .map(|c| c.freq)
         .collect::<Vec<_>>();
+    let num_tiles = unflagged_tile_xyzs.len();
+    let num_baselines = (num_tiles * (num_tiles - 1)) / 2;
+    let auto_vis_shape = (freqs.len(), num_tiles);
+
+    let weight_factor = ((input_vis_params.spw.freq_res / FREQ_WEIGHT_FACTOR)
+        * (input_vis_params.time_res.to_seconds() / TIME_WEIGHT_FACTOR))
+        as f32;
+
+    #[cfg(any(feature = "cuda", feature = "hip"))]
+    let use_baseline_shards = {
+        use crate::{gpu::partition_baselines_across_devices, model::ModelDevice, MODEL_DEVICE};
+        matches!(MODEL_DEVICE.load(), ModelDevice::Gpu)
+            && modelling_params.gpu_devices.len() > 1
+            && num_baselines > 0
+            && partition_baselines_across_devices(num_baselines, &modelling_params.gpu_devices)
+                .len()
+                > 1
+    };
+    #[cfg(not(any(feature = "cuda", feature = "hip")))]
+    let use_baseline_shards = false;
+
+    if use_baseline_shards {
+        #[cfg(any(feature = "cuda", feature = "hip"))]
+        {
+            return model_thread_baseline_sharded(
+                beam,
+                source_list,
+                input_vis_params,
+                modelling_params,
+                selected_timeblocks,
+                &unflagged_tile_xyzs,
+                &freqs,
+                model_autos,
+                vis_model_slices,
+                tx,
+                error,
+                progress_bar,
+                weight_factor,
+                auto_vis_shape,
+            );
+        }
+    }
+
     let modeller = new_sky_modeller(
         beam,
         source_list,
@@ -504,16 +626,9 @@ fn model_thread(
         input_vis_params.dut1,
         apply_precession,
     )?;
-    let num_tiles = unflagged_tile_xyzs.len();
-    let auto_vis_shape = (freqs.len(), num_tiles);
-
-    let weight_factor = ((input_vis_params.spw.freq_res / FREQ_WEIGHT_FACTOR)
-        * (input_vis_params.time_res.to_seconds() / TIME_WEIGHT_FACTOR))
-        as f32;
 
     // Iterate over all calibration timesteps and write to the model slices.
-    for (timestamp, mut vis_model_fb) in input_vis_params
-        .timeblocks
+    for (timestamp, mut vis_model_fb) in selected_timeblocks
         .iter()
         .map(|tb| tb.median)
         .zip(vis_model_slices)
@@ -544,6 +659,138 @@ fn model_thread(
             // been closed on the other side. That should only happen
             // because the writer has exited due to error; in that case,
             // just exit this thread.
+            Err(_) => return Ok(()),
+        }
+        progress_bar.inc(1);
+    }
+
+    debug!("Finished modelling");
+    progress_bar.abandon_with_message("Finished generating sky model");
+    Ok(())
+}
+
+#[cfg(any(feature = "cuda", feature = "hip"))]
+#[allow(clippy::too_many_arguments)]
+fn model_thread_baseline_sharded(
+    beam: &dyn Beam,
+    source_list: &SourceList,
+    input_vis_params: &InputVisParams,
+    modelling_params: &ModellingParams,
+    selected_timeblocks: &[Timeblock],
+    unflagged_tile_xyzs: &[marlu::XyzGeodetic],
+    freqs: &[f64],
+    model_autos: bool,
+    vis_model_slices: AxisIterMut<'_, Jones<f32>, Ix2>,
+    tx: Sender<VisTimestep>,
+    error: &AtomicCell<bool>,
+    progress_bar: ProgressBar,
+    weight_factor: f32,
+    auto_vis_shape: (usize, usize),
+) -> Result<(), ModelError> {
+    use crate::{
+        gpu::partition_baselines_across_devices,
+        model::SkyModellerGpu,
+    };
+
+    let obs_context = input_vis_params.get_obs_context();
+    let apply_precession = modelling_params.apply_precession;
+    let num_baselines = (unflagged_tile_xyzs.len() * (unflagged_tile_xyzs.len() - 1)) / 2;
+    let shards =
+        partition_baselines_across_devices(num_baselines, &modelling_params.gpu_devices);
+    info!(
+        "Baseline-sharded GPU modelling across {} device(s) ({} baselines)",
+        shards.len(),
+        num_baselines
+    );
+
+    let mut modellers = shards
+        .iter()
+        .map(|&(device, offset, count)| {
+            SkyModellerGpu::new_on_device(
+                beam,
+                source_list,
+                obs_context.polarisations,
+                unflagged_tile_xyzs,
+                freqs,
+                &input_vis_params.tile_baseline_flags.flagged_tiles,
+                obs_context.phase_centre,
+                obs_context.array_position.longitude_rad,
+                obs_context.array_position.latitude_rad,
+                input_vis_params.dut1,
+                apply_precession,
+                device,
+                offset,
+                Some(count),
+            )
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+    // Autos still need a full-array modeller (tile axis, not baselines).
+    let auto_modeller = if model_autos {
+        Some(new_sky_modeller(
+            beam,
+            source_list,
+            obs_context.polarisations,
+            unflagged_tile_xyzs,
+            freqs,
+            &input_vis_params.tile_baseline_flags.flagged_tiles,
+            obs_context.phase_centre,
+            obs_context.array_position.longitude_rad,
+            obs_context.array_position.latitude_rad,
+            input_vis_params.dut1,
+            apply_precession,
+        )?)
+    } else {
+        None
+    };
+
+    let num_freqs = freqs.len();
+    for (timestamp, mut vis_model_fb) in selected_timeblocks
+        .iter()
+        .map(|tb| tb.median)
+        .zip(vis_model_slices)
+    {
+        debug!(
+            "Modelling timestamp {} with baseline shards",
+            timestamp.to_gpst_seconds()
+        );
+
+        let pieces: Result<Vec<_>, ModelError> = modellers
+            .par_iter_mut()
+            .zip(shards.par_iter())
+            .map(|(modeller, &(device, offset, count))| {
+                crate::gpu::set_device(device)?;
+                let mut shard = Array2::zeros((num_freqs, count));
+                modeller.model_timestep_with(timestamp, shard.view_mut())?;
+                Ok((offset, shard))
+            })
+            .collect();
+        for (offset, shard) in pieces? {
+            let end = offset + shard.len_of(Axis(1));
+            vis_model_fb
+                .slice_mut(s![.., offset..end])
+                .assign(&shard);
+        }
+
+        let auto_data_fb = if let Some(auto_modeller) = auto_modeller.as_ref() {
+            let mut auto_data_fb = ArcArray2::zeros(auto_vis_shape);
+            auto_modeller.model_timestep_autos_with(timestamp, auto_data_fb.view_mut())?;
+            Some(auto_data_fb)
+        } else {
+            None
+        };
+
+        if error.load() {
+            return Ok(());
+        }
+
+        match tx.send(VisTimestep {
+            cross_data_fb: vis_model_fb.to_shared(),
+            cross_weights_fb: ArcArray::from_elem(vis_model_fb.dim(), weight_factor),
+            autos: auto_data_fb.map(|d| (d, ArcArray2::from_elem(auto_vis_shape, weight_factor))),
+            timestamp,
+        }) {
+            Ok(()) => (),
             Err(_) => return Ok(()),
         }
         progress_bar.inc(1);

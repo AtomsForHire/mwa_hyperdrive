@@ -665,3 +665,70 @@ fn model_timestep_autos_with_shapelet() {
 
     test_model_timestep_autos_with_shapelet(visibilities.view(), 0.0);
 }
+
+/// Baseline shards on the same device must match a full-array model (VRAM-split
+/// path correctness without needing multiple GPUs).
+#[test]
+fn baseline_shards_match_full_model() {
+    use approx::assert_abs_diff_eq;
+    use hifitime::{Duration, Epoch};
+
+    use crate::context::Polarisations;
+
+    let obs = ObsParams::new(true);
+    let num_baselines = obs.uvws.len();
+    assert!(num_baselines >= 2, "need at least two baselines to shard");
+    let timestamp = Epoch::from_gpst_seconds(1090008640.0);
+
+    let (full, _) = obs.get_gpu_modeller(&POINT_ZENITH_POWER_LAW);
+    let (vis_full, _) = full.model_timestep(timestamp).unwrap();
+
+    let mid = num_baselines / 2;
+    let left = SkyModellerGpu::new_on_device(
+        &*obs.beam,
+        &POINT_ZENITH_POWER_LAW,
+        Polarisations::default(),
+        &obs.xyzs,
+        &obs.freqs,
+        &obs.flagged_tiles,
+        obs.phase_centre,
+        obs.array_longitude_rad,
+        obs.array_latitude_rad,
+        Duration::default(),
+        true,
+        0,
+        0,
+        Some(mid),
+    )
+    .unwrap();
+    let right = SkyModellerGpu::new_on_device(
+        &*obs.beam,
+        &POINT_ZENITH_POWER_LAW,
+        Polarisations::default(),
+        &obs.xyzs,
+        &obs.freqs,
+        &obs.flagged_tiles,
+        obs.phase_centre,
+        obs.array_longitude_rad,
+        obs.array_latitude_rad,
+        Duration::default(),
+        true,
+        0,
+        mid,
+        Some(num_baselines - mid),
+    )
+    .unwrap();
+
+    let mut vis_sharded = Array2::zeros((obs.freqs.len(), num_baselines));
+    left.model_timestep_with(timestamp, vis_sharded.slice_mut(s![.., ..mid]))
+        .unwrap();
+    right
+        .model_timestep_with(timestamp, vis_sharded.slice_mut(s![.., mid..]))
+        .unwrap();
+
+    #[cfg(not(feature = "gpu-single"))]
+    let epsilon = 1e-12;
+    #[cfg(feature = "gpu-single")]
+    let epsilon = 2e-5;
+    assert_abs_diff_eq!(vis_full, vis_sharded, epsilon = epsilon);
+}

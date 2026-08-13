@@ -172,7 +172,13 @@ typedef struct JonesF64 {
 typedef struct Addresses {
     const int num_freqs;
     const int num_vis;
+    /// Number of baselines in this shard (or the full array when not sharding).
     const int num_baselines;
+    /// Total number of unflagged tiles in the array. Used to decode global
+    /// baseline indices to tile pairs; must not be derived from a shard length.
+    const int num_tiles;
+    /// Global baseline index of the first baseline in this shard.
+    const int baseline_offset;
     const FLOAT *d_freqs;
     const FLOAT *d_shapelet_basis_values;
     const int num_unique_beam_freqs;

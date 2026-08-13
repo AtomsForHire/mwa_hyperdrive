@@ -63,7 +63,7 @@ impl ModelDevice {
 
             #[cfg(any(feature = "cuda", feature = "hip"))]
             ModelDevice::Gpu => {
-                let (device_info, driver_info) = crate::gpu::get_device_info()?;
+                let (device_info, driver_info) = crate::gpu::get_device_info(0)?;
                 #[cfg(feature = "cuda")]
                 let device_type = "CUDA";
                 #[cfg(feature = "hip")]

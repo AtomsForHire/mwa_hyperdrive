@@ -232,7 +232,9 @@ impl DiCalArgs {
         let obs_context = input_vis_params.get_obs_context();
         let total_num_tiles = input_vis_params.get_total_num_tiles();
 
-        let modelling_params @ ModellingParams { apply_precession } = model_args.parse();
+        let modelling_params @ ModellingParams {
+            apply_precession, ..
+        } = model_args.parse();
 
         let DiCalCliArgs {
             timesteps_per_timeblock,

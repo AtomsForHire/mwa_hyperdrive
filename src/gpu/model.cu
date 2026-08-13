@@ -96,23 +96,25 @@ inline __device__ COMPLEX get_shapelet_envelope(const GaussianParams g_params, c
     return envelope;
 }
 
-__global__ void model_points_kernel(const int num_freqs, const int num_baselines, const FLOAT *freqs, const UVW *uvws,
-                                    const Points comps, const JONES *__restrict__ beam_jones, const int *tile_map,
+__global__ void model_points_kernel(const int num_freqs, const int num_baselines, const int num_tiles,
+                                    const int baseline_offset, const FLOAT *freqs, const UVW *uvws, const Points comps,
+                                    const JONES *__restrict__ beam_jones, const int *tile_map,
                                     const int *__restrict__ freq_map, int num_fee_freqs,
                                     const int *__restrict__ tile_index_to_unflagged_tile_index_map,
                                     JonesF32 *__restrict__ vis_fb) {
-    // The 0-indexed number of tiles as a float (n-1).
-    const float ntiles_sub1f = NTILES_SUB1F_FROM_BASELINES(num_baselines);
+    // Decode tiles from global baseline indices using the full array tile count.
+    const float ntiles_sub1f = (float)(num_tiles - 1);
     const int num_directions = comps.num_power_laws + comps.num_curved_power_laws + comps.num_lists;
 
     for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < num_baselines * num_freqs; i += gridDim.x * blockDim.x) {
         const int i_bl = i % num_baselines;
         const int i_freq = i / num_baselines;
+        const int i_bl_global = i_bl + baseline_offset;
 
         const FLOAT freq = freqs[i_freq];
         const UVW uvw = uvws[i_bl] * freq / VEL_C;
 
-        BASELINE_TO_TILES(i_bl, ntiles_sub1f, i_tile1, i_tile2);
+        BASELINE_TO_TILES(i_bl_global, ntiles_sub1f, i_tile1, i_tile2);
 
         // `i_j1_row` and `i_j2_row` are indices into beam responses.
         const int i_j1_row = tile_map[tile_index_to_unflagged_tile_index_map[i_tile1]];
@@ -175,23 +177,25 @@ __global__ void model_points_kernel(const int num_freqs, const int num_baselines
 /**
  * Kernel for calculating Gaussian-source-component visibilities.
  */
-__global__ void model_gaussians_kernel(const int num_freqs, const int num_baselines, const FLOAT *freqs,
-                                       const UVW *uvws, const Gaussians comps, const JONES *__restrict__ beam_jones,
-                                       const int *tile_map, const int *__restrict__ freq_map, const int num_fee_freqs,
+__global__ void model_gaussians_kernel(const int num_freqs, const int num_baselines, const int num_tiles,
+                                       const int baseline_offset, const FLOAT *freqs, const UVW *uvws,
+                                       const Gaussians comps, const JONES *__restrict__ beam_jones, const int *tile_map,
+                                       const int *__restrict__ freq_map, const int num_fee_freqs,
                                        const int *__restrict__ tile_index_to_unflagged_tile_index_map,
                                        JonesF32 *__restrict__ vis_fb) {
-    // The 0-indexed number of tiles as a float (n-1).
-    const float ntiles_sub1f = NTILES_SUB1F_FROM_BASELINES(num_baselines);
+    // Decode tiles from global baseline indices using the full array tile count.
+    const float ntiles_sub1f = (float)(num_tiles - 1);
     const int num_directions = comps.num_power_laws + comps.num_curved_power_laws + comps.num_lists;
 
     for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < num_baselines * num_freqs; i += gridDim.x * blockDim.x) {
         const int i_bl = i % num_baselines;
         const int i_freq = i / num_baselines;
+        const int i_bl_global = i_bl + baseline_offset;
 
         const FLOAT freq = freqs[i_freq];
         const UVW uvw = uvws[i_bl] * freq / VEL_C;
 
-        BASELINE_TO_TILES(i_bl, ntiles_sub1f, i_tile1, i_tile2);
+        BASELINE_TO_TILES(i_bl_global, ntiles_sub1f, i_tile1, i_tile2);
 
         // `i_j1_row` and `i_j2_row` are indices into beam responses.
         const int i_j1_row = tile_map[tile_index_to_unflagged_tile_index_map[i_tile1]];
@@ -265,26 +269,27 @@ __global__ void model_gaussians_kernel(const int num_freqs, const int num_baseli
  * `*_shapelet_coeffs` is actually a flattened array-of-arrays. The size of each
  * sub-array is given by an element of `*_num_shapelet_coeffs`.
  */
-__global__ void model_shapelets_kernel(const int num_freqs, const int num_baselines, const FLOAT *__restrict__ freqs,
-                                       const UVW *uvws, const Shapelets comps,
-                                       const FLOAT *__restrict__ shapelet_basis_values,
+__global__ void model_shapelets_kernel(const int num_freqs, const int num_baselines, const int num_tiles,
+                                       const int baseline_offset, const FLOAT *__restrict__ freqs, const UVW *uvws,
+                                       const Shapelets comps, const FLOAT *__restrict__ shapelet_basis_values,
                                        const JONES *__restrict__ beam_jones, const int *__restrict__ tile_map,
                                        const int *__restrict__ freq_map, const int num_fee_freqs,
                                        const int *__restrict__ tile_index_to_unflagged_tile_index_map,
                                        JonesF32 *__restrict__ vis_fb) {
-    // The 0-indexed number of tiles as a float (n-1).
-    const float ntiles_sub1f = NTILES_SUB1F_FROM_BASELINES(num_baselines);
+    // Decode tiles from global baseline indices using the full array tile count.
+    const float ntiles_sub1f = (float)(num_tiles - 1);
     const int num_directions = comps.num_power_laws + comps.num_curved_power_laws + comps.num_lists;
 
     for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < num_baselines * num_freqs; i += gridDim.x * blockDim.x) {
         const int i_bl = i % num_baselines;
         const int i_freq = i / num_baselines;
+        const int i_bl_global = i_bl + baseline_offset;
 
         const FLOAT freq = freqs[i_freq];
         const FLOAT one_on_lambda = freq / VEL_C;
         const UVW uvw = uvws[i_bl] * one_on_lambda;
 
-        BASELINE_TO_TILES(i_bl, ntiles_sub1f, i_tile1, i_tile2);
+        BASELINE_TO_TILES(i_bl_global, ntiles_sub1f, i_tile1, i_tile2);
 
         // `i_j1_row` and `i_j2_row` are indices into beam responses.
         const int i_j1_row = tile_map[tile_index_to_unflagged_tile_index_map[i_tile1]];
@@ -491,9 +496,10 @@ extern "C" const char *model_points(const Points *comps, const Addresses *a, con
     blockDim.x = NUM_THREADS_PER_BLOCK_POINTS;
     gridDim.x = (int)ceil((double)(a->num_baselines * a->num_freqs) / (double)blockDim.x);
 
-    model_points_kernel<<<gridDim, blockDim>>>(a->num_freqs, a->num_baselines, a->d_freqs, d_uvws, *comps, d_beam_jones,
-                                               a->d_tile_map, a->d_freq_map, a->num_unique_beam_freqs,
-                                               a->d_tile_index_to_unflagged_tile_index_map, d_vis_fb);
+    model_points_kernel<<<gridDim, blockDim>>>(a->num_freqs, a->num_baselines, a->num_tiles, a->baseline_offset,
+                                               a->d_freqs, d_uvws, *comps, d_beam_jones, a->d_tile_map, a->d_freq_map,
+                                               a->num_unique_beam_freqs, a->d_tile_index_to_unflagged_tile_index_map,
+                                               d_vis_fb);
 
 #ifdef DEBUG
     CHECK_GPU_ERROR(gpuDeviceSynchronize());
@@ -510,9 +516,9 @@ extern "C" const char *model_gaussians(const Gaussians *comps, const Addresses *
     blockDim.x = NUM_THREADS_PER_BLOCK_GAUSSIANS;
     gridDim.x = (int)ceil((double)(a->num_baselines * a->num_freqs) / (double)blockDim.x);
 
-    model_gaussians_kernel<<<gridDim, blockDim>>>(a->num_freqs, a->num_baselines, a->d_freqs, d_uvws, *comps,
-                                                  d_beam_jones, a->d_tile_map, a->d_freq_map, a->num_unique_beam_freqs,
-                                                  a->d_tile_index_to_unflagged_tile_index_map, d_vis_fb);
+    model_gaussians_kernel<<<gridDim, blockDim>>>(
+        a->num_freqs, a->num_baselines, a->num_tiles, a->baseline_offset, a->d_freqs, d_uvws, *comps, d_beam_jones,
+        a->d_tile_map, a->d_freq_map, a->num_unique_beam_freqs, a->d_tile_index_to_unflagged_tile_index_map, d_vis_fb);
 
 #ifdef DEBUG
     CHECK_GPU_ERROR(gpuDeviceSynchronize());
@@ -530,8 +536,9 @@ extern "C" const char *model_shapelets(const Shapelets *comps, const Addresses *
     gridDim.x = (int)ceil((double)(a->num_baselines * a->num_freqs) / (double)blockDim.x);
 
     model_shapelets_kernel<<<gridDim, blockDim>>>(
-        a->num_freqs, a->num_baselines, a->d_freqs, d_uvws, *comps, a->d_shapelet_basis_values, d_beam_jones,
-        a->d_tile_map, a->d_freq_map, a->num_unique_beam_freqs, a->d_tile_index_to_unflagged_tile_index_map, d_vis_fb);
+        a->num_freqs, a->num_baselines, a->num_tiles, a->baseline_offset, a->d_freqs, d_uvws, *comps,
+        a->d_shapelet_basis_values, d_beam_jones, a->d_tile_map, a->d_freq_map, a->num_unique_beam_freqs,
+        a->d_tile_index_to_unflagged_tile_index_map, d_vis_fb);
 
 #ifdef DEBUG
     CHECK_GPU_ERROR(gpuDeviceSynchronize());

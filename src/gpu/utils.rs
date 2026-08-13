@@ -31,12 +31,46 @@ pub(crate) struct GpuDeviceInfo {
     pub(crate) total_global_mem: usize,
 }
 
-/// Get CUDA/HIP device and driver information. At present, this function only
-/// returns information on "device 0".
-pub(crate) fn get_device_info() -> Result<(GpuDeviceInfo, GpuDriverInfo), GpuError> {
+fn gpu_c_error(error_message_ptr: *const std::os::raw::c_char) -> GpuError {
+    let error_message = unsafe { CStr::from_ptr(error_message_ptr).to_str() };
+    #[cfg(feature = "cuda")]
+    let error_message = error_message.unwrap_or("<cannot read CUDA error string>");
+    #[cfg(feature = "hip")]
+    let error_message = error_message.unwrap_or("<cannot read HIP error string>");
+    let location = Location::caller();
+    GpuError::Generic {
+        msg: error_message.into(),
+        file: location.file(),
+        line: location.line(),
+    }
+}
+
+/// Number of CUDA/HIP devices visible to this process.
+pub(crate) fn get_device_count() -> Result<i32, GpuError> {
     unsafe {
-        // TODO: Always assume we're using device 0 for now.
-        let device = 0;
+        let mut count = 0;
+        let error_message_ptr = get_gpu_device_count(&mut count);
+        if !error_message_ptr.is_null() {
+            return Err(gpu_c_error(error_message_ptr));
+        }
+        Ok(count)
+    }
+}
+
+/// Set the calling thread's current CUDA/HIP device.
+pub(crate) fn set_device(device: i32) -> Result<(), GpuError> {
+    unsafe {
+        let error_message_ptr = set_gpu_device(device);
+        if !error_message_ptr.is_null() {
+            return Err(gpu_c_error(error_message_ptr));
+        }
+        Ok(())
+    }
+}
+
+/// Get CUDA/HIP device and driver information for `device`.
+pub(crate) fn get_device_info(device: i32) -> Result<(GpuDeviceInfo, GpuDriverInfo), GpuError> {
+    unsafe {
         let name = CString::from_vec_unchecked(vec![1; 256]).into_raw();
         let mut device_major = 0;
         let mut device_minor = 0;
@@ -53,18 +87,7 @@ pub(crate) fn get_device_info() -> Result<(GpuDeviceInfo, GpuDriverInfo), GpuErr
             &mut runtime_version,
         );
         if !error_message_ptr.is_null() {
-            // Get the CUDA/HIP error message behind the pointer.
-            let error_message = CStr::from_ptr(error_message_ptr).to_str();
-            #[cfg(feature = "cuda")]
-            let error_message = error_message.unwrap_or("<cannot read CUDA error string>");
-            #[cfg(feature = "hip")]
-            let error_message = error_message.unwrap_or("<cannot read HIP error string>");
-            let location = Location::caller();
-            return Err(GpuError::Generic {
-                msg: error_message.into(),
-                file: location.file(),
-                line: location.line(),
-            });
+            return Err(gpu_c_error(error_message_ptr));
         }
 
         let device_info = GpuDeviceInfo {
@@ -111,5 +134,52 @@ pub(crate) fn get_device_info() -> Result<(GpuDeviceInfo, GpuDriverInfo), GpuErr
                 runtime_version: runtime_version.into_boxed_str(),
             },
         ))
+    }
+}
+
+/// Partition `num_baselines` into contiguous shards, one per device.
+///
+/// Returns `(device_id, baseline_offset, baseline_count)` triples. Empty input
+/// yields an empty vec. Extra devices beyond `num_baselines` are unused.
+pub(crate) fn partition_baselines_across_devices(
+    num_baselines: usize,
+    devices: &[i32],
+) -> Vec<(i32, usize, usize)> {
+    if num_baselines == 0 || devices.is_empty() {
+        return vec![];
+    }
+    let n_shards = devices.len().min(num_baselines);
+    let base = num_baselines / n_shards;
+    let rem = num_baselines % n_shards;
+    let mut offset = 0;
+    let mut out = Vec::with_capacity(n_shards);
+    for (i, &device) in devices.iter().take(n_shards).enumerate() {
+        let count = base + usize::from(i < rem);
+        out.push((device, offset, count));
+        offset += count;
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn partition_baselines_even() {
+        let shards = partition_baselines_across_devices(10, &[0, 1]);
+        assert_eq!(shards, vec![(0, 0, 5), (1, 5, 5)]);
+    }
+
+    #[test]
+    fn partition_baselines_uneven() {
+        let shards = partition_baselines_across_devices(11, &[0, 1, 2]);
+        assert_eq!(shards, vec![(0, 0, 4), (1, 4, 4), (2, 8, 3)]);
+    }
+
+    #[test]
+    fn partition_more_devices_than_baselines() {
+        let shards = partition_baselines_across_devices(2, &[0, 1, 2, 3]);
+        assert_eq!(shards, vec![(0, 0, 1), (1, 1, 1)]);
     }
 }
